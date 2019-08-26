@@ -1,0 +1,36 @@
+
+	name		read								write
+00	DATA		READ DATA FROM FIFO					WRITE DATA TO FIFO
+01	DATA2		enable for 32 bit comms?
+02
+03
+04	CTRL1		read control regs					write control regs
+05	CTRL2		read control regs					write control regs
+06	CLOCKDIV	read divider						set divider
+07	CLOCKPRE	read prescaler						set prescaler 
+08	STATUS1		read protocol status				clear a status?
+09	STATUS1		read protocol status				clear a status?
+0A
+0B
+0C
+0D
+0E
+0F	INT			read which int occured				enable/disable individual interrupts
+
+// global stuff starts here? for most protocols the same, except ID
+10	LADATA		read back data (with autoinc)		set data (freeform signal generator)
+11	LACLOCKDIV	read laclock divider				set clock div for la		
+12	LAHADDR		read logic analyzer hi address		set hi address
+13	LALADDR		read logic analyzer lo address		set lo address
+14	PSU/PU		read PSU/PU statusses				enable/disable psu or PU (3v3/5v0/1v8/2v5/ext)
+15
+16
+17
+18	AUX1CFG		reads pin/settings					set directtion/iostate connects PWM/set freq counter	
+19	AUX1PWM		reads pwm settings					set PWM settings
+1A	AUX1CNT		freq counter						n/a
+1B	GSTATUS		read global statusses				enable/hiz/global interrupt enable/lsb?/msb?/numbits?
+1C	AUX2CFG		reads pin/settings					set directtion/iostate connects PWM/set freq counter
+1D	AUX2PWM		read pwm settings					set PWM setting
+1E	AUX2CNT		freq coutner						n/a
+1F	ID			reads ID/version/protocol

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+<p>Click the button to display the array values after the split.</p>
+
+<textarea id="data">clock,
+            bufdir_mosi, bufod_mosi, bufio_mosi,
+            bufdir_clock, bufod_clock, bufio_clock,
+            bufdir_miso, bufod_miso, bufio_miso,
+            bufdir_cs, bufod_cs, bufio_cs,
+            bufdir_aux, bufod_aux, bufio_aux,
+            lat_oe,lat,
+            mc_oe, mc_ce, mc_we, mc_add,mc_data,
+            irq0,irq1,
+            sram_clock, sram0_cs, sram0_sio,sram1_cs, sram1_sio</textarea>
+			
+<button onclick="myFunction()">Try it</button>
+
+<p id="demo"></p>
+
+<script>
+function myFunction() {
+  var str = document.getElementById("data").value
+  str=str.replace(/\s+/g, '');
+  var res = str.split(",");
+  var f='';
+  for(var i=0; i<res.length; i++)
+	f=f+'.'+res[i]+'('+res[i]+"),\n";
+	document.getElementById("demo").innerHTML = '<pre>'+f+'</pre>';
+console.log(res.length);
+}
+</script>
+
+</body>
+</html>

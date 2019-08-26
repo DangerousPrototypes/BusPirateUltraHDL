@@ -1,0 +1,83 @@
+#------------------------------------------------------------------
+#-- Bus Pirate pin map for development hardware
+#--
+#------------------------------------------------------------------
+
+# Clock source
+set_io clock 20 # friendly name, fpga pin
+
+# Bus Pirate buffer control pins
+set_io bufdir_mosi 75 #74LVC1T45 DIR
+set_io bufod_mosi 73 #74LVC1G07 A
+set_io bufio_mosi 74 #74LVC1T45 A
+set_io bufdir_clock 79
+set_io bufod_clock 76
+set_io bufio_clock 78
+set_io bufdir_miso 82
+set_io bufod_miso 80
+set_io bufio_miso 81
+set_io bufdir_cs 104
+set_io bufod_cs 101
+set_io bufio_cs 102
+set_io bufdir_aux 107
+set_io bufod_aux 105
+set_io bufio_aux 106
+
+# Peek-behind buffer/latch (74AC573)
+set_io lat_oe 91 #latch output enable
+set_io lat[0] 93 #mosi
+set_io lat[1] 94 #clock
+set_io lat[2] 95 #miso
+set_io lat[3] 96 #cs
+set_io lat[4] 97 #aux0
+set_io lat[5] 98 #swv33
+set_io lat[6] 99 #swv50
+set_io lat[7] 90 # not currently attached!!!!
+
+# Memory controller interface address and data
+set_io mc_ce 37 #missing
+set_io mc_oe 38 #missing
+set_io mc_we 39 #missing
+
+set_io mc_add[0] 3
+set_io mc_add[1] 4
+set_io mc_add[2] 7
+set_io mc_add[3] 8
+set_io mc_add[4] 9
+set_io mc_add[5] 10
+
+set_io mc_data[0] 24
+set_io mc_data[1] 23
+set_io mc_data[2] 1
+set_io mc_data[3] 2
+set_io mc_data[4] 15
+set_io mc_data[5] 16
+set_io mc_data[6] 17
+set_io mc_data[7] 18
+set_io mc_data[8] 19
+set_io mc_data[9] 25
+set_io mc_data[10] 26
+set_io mc_data[11] 28
+set_io mc_data[12] 29
+set_io mc_data[13] 33
+set_io mc_data[14] 32
+set_io mc_data[15] 31
+
+# Interrupt lines
+set_io irq0 129
+set_io irq1 128
+
+# SRAM connectons (23LC1024/etc)
+set_io sram_clock 141 #shared
+
+set_io sram0_cs 144
+set_io sram0_sio[0] 142
+set_io sram0_sio[1] 139
+set_io sram0_sio[2] 138
+set_io sram0_sio[3] 137
+
+set_io sram1_cs 130
+set_io sram1_sio[0] 136
+set_io sram1_sio[1] 135
+set_io sram1_sio[2] 134
+set_io sram1_sio[3] 124 #currently wrong pin! needs to be updated when schematic has updated naming
