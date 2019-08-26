@@ -1,0 +1,87 @@
+[*]
+[*] GTKWave Analyzer v3.3.77 (w)1999-2016 BSI
+[*] Fri Aug 16 08:42:36 2019
+[*]
+[dumpfile] "C:\Users\ian\Desktop\buspirateultra\hdl\iobuffer\buspirate_tb.vcd"
+[dumpfile_mtime] "Fri Aug 16 08:33:54 2019"
+[dumpfile_size] 55685
+[savefile] "C:\Users\ian\Desktop\buspirateultra\hdl\iobuffer\buspirate_tb.gtkw"
+[timestart] 0
+[size] 1920 1017
+[pos] -1 -1
+*-18.147940 3370000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] buspirate_tb.
+[treeopen] buspirate_tb.buspirate.
+[sst_width] 211
+[signals_width] 285
+[sst_expanded] 1
+[sst_vpaned_height] 478
+@28
+buspirate_tb.buspirate.clock
+@200
+-MEMORY CONTROLLER
+@28
+buspirate_tb.buspirate.mc_we
+buspirate_tb.buspirate.mc_we_sync
+buspirate_tb.buspirate.mc_oe
+buspirate_tb.buspirate.mc_oe_sync
+@22
+buspirate_tb.buspirate.mc_add[5:0]
+buspirate_tb.buspirate.mc_data[15:0]
+buspirate_tb.buspirate.mc_din[15:0]
+buspirate_tb.buspirate.mc_dout[15:0]
+@200
+-SRAMs
+-BUFFER PINS
+@28
+buspirate_tb.BP_BUF[0].iopin_state
+buspirate_tb.BP_BUF[1].iopin_state
+buspirate_tb.BP_BUF[2].iopin_state
+buspirate_tb.BP_BUF[3].iopin_state
+buspirate_tb.BP_BUF[4].iopin_state
+@200
+-SPI
+@22
+buspirate_tb.buspirate.SPI_MASTER.data_o[7:0]
+buspirate_tb.buspirate.SPI_MASTER.data_i[15:0]
+@28
+buspirate_tb.buspirate.BPIO_BUF[2].din
+buspirate_tb.buspirate.BPIO_BUF[2].dout
+buspirate_tb.buspirate.SPI_MASTER.go
+buspirate_tb.buspirate.SPI_MASTER.mosi
+buspirate_tb.buspirate.SPI_MASTER.state
+buspirate_tb.buspirate.SPI_MASTER.sclk
+buspirate_tb.buspirate.SPI_MASTER.rst
+@29
+buspirate_tb.buspirate.reset
+@200
+-FIFO_IN
+-FIFO_OUT
+@28
+buspirate_tb.buspirate.FIFO_IN.in_clock
+@22
+buspirate_tb.buspirate.FIFO_IN.in_data[15:0]
+@28
+buspirate_tb.buspirate.FIFO_IN.in_full
+buspirate_tb.buspirate.FIFO_IN.in_nempty
+@22
+buspirate_tb.buspirate.FIFO_IN.in_pos[7:0]
+@28
+buspirate_tb.buspirate.FIFO_IN.in_shift
+@22
+buspirate_tb.buspirate.FIFO_IN.out_data[15:0]
+buspirate_tb.buspirate.bpsm_state[4:0]
+@28
+buspirate_tb.buspirate.FIFO_IN.out_pop
+buspirate_tb.buspirate.in_fifo_out_pop
+@22
+buspirate_tb.buspirate.delay_counter[7:0]
+@28
+buspirate_tb.buspirate.bp_busy
+buspirate_tb.buspirate.bp_active
+buspirate_tb.buspirate.la_start
+buspirate_tb.buspirate.sram_clock_source
+buspirate_tb.buspirate.sram_cs[1:0]
+buspirate_tb.buspirate.sram_auto_clock
+[pattern_trace] 1
+[pattern_trace] 0
