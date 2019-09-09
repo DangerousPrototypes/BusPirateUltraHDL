@@ -1,0 +1,24 @@
+
+
+set_io rst 1
+set_io clk 2
+set_io go 3
+set_io txbusy 4
+set_io txdata[0] 25 
+set_io txdata[1] 26
+set_io txdata[2] 7
+set_io txdata[3] 8
+set_io txdata[4] 9
+set_io txdata[5] 10
+set_io txdata[6] 11
+set_io txdata[7] 12
+set_io rxdata[0] 23
+set_io rxdata[1] 24
+set_io rxdata[2] 15
+set_io rxdata[3] 16
+set_io rxdata[4] 17
+set_io rxdata[5] 18
+set_io rxdata[6] 19
+set_io rxdata[7] 20
+set_io txd 21
+set_io rxd 22

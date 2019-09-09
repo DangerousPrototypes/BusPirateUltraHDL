@@ -1,0 +1,45 @@
+[*]
+[*] GTKWave Analyzer v3.3.77 (w)1999-2016 BSI
+[*] Mon Sep 09 16:40:45 2019
+[*]
+[dumpfile] "C:\buspirate\uart\uart_tb.vcd"
+[dumpfile_mtime] "Mon Sep 09 16:38:47 2019"
+[dumpfile_size] 5313
+[savefile] "C:\buspirate\uart\uart_tb.gtkw"
+[timestart] 4994
+[size] 1280 657
+[pos] -1 -1
+*-9.573140 5750 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] uart_tb.
+[sst_width] 197
+[signals_width] 217
+[sst_expanded] 1
+[sst_vpaned_height] 173
+@28
+uart_tb.UUT.clk
+uart_tb.UUT.go
+uart_tb.UUT.lastrxd
+uart_tb.UUT.rst
+@22
+uart_tb.UUT.rxbitcount[3:0]
+@28
+uart_tb.UUT.rxd
+@22
+uart_tb.UUT.rxdata[7:0]
+@29
+uart_tb.UUT.frameerror
+@28
+uart_tb.UUT.rxdivider[2:0]
+uart_tb.UUT.rxstate[1:0]
+@22
+uart_tb.UUT.txbitcount[3:0]
+@28
+uart_tb.UUT.txbusy
+uart_tb.UUT.txd
+@22
+uart_tb.UUT.txdata[7:0]
+@28
+uart_tb.UUT.txdivider[1:0]
+uart_tb.UUT.txstate[1:0]
+[pattern_trace] 1
+[pattern_trace] 0
