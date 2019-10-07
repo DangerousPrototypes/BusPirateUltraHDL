@@ -4,36 +4,46 @@
 #------------------------------------------------------------------
 
 # Clock source
-set_io clock 20 # friendly name, fpga pin
-set_io -nowarn reset 55  #wrong pin, just holder
+set_io clock 128 # friendly name, fpga pin
+set_io -nowarn reset 129  #MCU_INT0
 
 # Bus Pirate bpio_fer control pins
-set_io bpio_buffer_dir[0] 79 #74LVC1T45 DIR
-set_io bpio_buffer_od[0] 76 #74LVC1G07 A
-set_io bpio_buffer_io[0] 78 #74LVC1T45 A
-set_io bpio_buffer_dir[1] 75
-set_io bpio_buffer_od[1] 73
-set_io bpio_buffer_io[1] 74
-set_io bpio_buffer_dir[2] 82
-set_io bpio_buffer_od[2] 80
-set_io bpio_buffer_io[2] 81
-set_io bpio_buffer_dir[3] 107
-set_io bpio_buffer_od[3] 105
-set_io bpio_buffer_io[3] 106
-set_io bpio_buffer_dir[4] 104
-set_io bpio_buffer_od[4] 101
-set_io bpio_buffer_io[4] 102
+set_io bpio_buffer_dir[0] 107 #74LVC1T45 DIR
+set_io bpio_buffer_od[0] 105 #74LVC1G07 A
+set_io bpio_buffer_io[0] 106 #74LVC1T45 A
+set_io bpio_buffer_dir[1] 113
+set_io bpio_buffer_od[1] 110
+set_io bpio_buffer_io[1] 112
+set_io bpio_buffer_dir[2] 99
+set_io bpio_buffer_od[2] 97
+set_io bpio_buffer_io[2] 98
+set_io bpio_buffer_dir[3] 104
+set_io bpio_buffer_od[3] 101
+set_io bpio_buffer_io[3] 102
+set_io bpio_buffer_dir[4] 79
+set_io bpio_buffer_od[4] 76
+set_io bpio_buffer_io[4] 78
+set_io bpio_buffer_dir[5] 75
+set_io bpio_buffer_od[5] 73
+set_io bpio_buffer_io[5] 74
+set_io bpio_buffer_dir[6] 64
+set_io bpio_buffer_od[6] 62
+set_io bpio_buffer_io[6] 63
+set_io bpio_buffer_dir[7] 61
+set_io bpio_buffer_od[7] 56
+set_io bpio_buffer_io[7] 60
 
-# Peek-behind bpio_fer/latch (74AC573)
-set_io lat_oe 90 #latch output enable
-set_io lat[0] 93 #mosi
-set_io lat[1] 94 #clock
-set_io lat[2] 95 #miso
-set_io lat[3] 96 #cs
-set_io lat[4] 97 #aux0
-set_io lat[5] 98 #swv33
-set_io lat[6] 99 #swv50
-set_io lat[7] 91 # not currently attached!!!!, AUX1
+# Peek-behind bpio_fer/latch (74LVC245)
+#set_io lat_oe 90 #latch output enable not connected in v1b
+#set_io lat_dir #not connected in v1b
+set_io lat[0] 91
+set_io lat[1] 90
+set_io lat[2] 88
+set_io lat[3] 87
+set_io lat[4] 85
+set_io lat[5] 84
+set_io lat[6] 83
+set_io lat[7] 82
 
 # Memory controller interface address and data
 set_io mc_ce 22
@@ -52,13 +62,18 @@ set_io mcu_cs 71 #B12
 set_io mcu_mosi 68 #MOSI B15
 set_io mcu_miso 67 #MISO B14
 
-set_io bp_active 137 #C10
-set_io bp_fifo_in_full 136 #C11
-set_io bp_fifo_out_nempty 135 #C12
-set_io -nowarn mcu_aux4 134 #
-set_io -nowarn mcu_aux5 125 #B8 DONT TRUST THESE NUMBERS!!
-set_io -nowarn mcu_aux6 124 #B9 DONT TRUST THESE NUMBERS!!
-set_io -nowarn mcu_aux7 119 #
+set_io bp_active 137 #C10 #AUX1
+set_io bp_fifo_in_full 136 #C11 #AUX2
+set_io bp_fifo_out_nempty 135 #C12 #AUX3
+set_io -nowarn mcu_aux4 134 #D6
+set_io -nowarn mcu_aux5 130 #B8
+set_io -nowarn mcu_aux6 125 #B9
+set_io -nowarn mcu_aux7 124 #E0
+set_io -nowarn mcu_aux8 122 #E1
+set_io -nowarn mcu_aux9 37 #F13
+set_io -nowarn mcu_aux10 38 #G1
+set_io -nowarn mcu_aux11 39 #F14
+set_io -nowarn mcu_aux12 41 #F15
 
 
 set_io mc_data[0] 24
@@ -79,8 +94,8 @@ set_io mc_data[14] 32
 set_io mc_data[15] 31
 
 # Interrupt lines
-set_io -nowarn irq0 129
-set_io -nowarn irq1 128
+#set_io -nowarn irq0 129
+set_io -nowarn irq1 49
 
 # SRAM connectons (23LC1024/etc)
 set_io sram_clock[0] 141
@@ -90,9 +105,15 @@ set_io sram_sio[1] 142
 set_io sram_sio[2] 139
 set_io sram_sio[3] 143
 
-set_io sram_clock[1] 114
-set_io sram_cs[1] 117
-set_io sram_sio[4] 112
-set_io sram_sio[5] 115
-set_io sram_sio[6] 113
-set_io sram_sio[7] 116
+set_io sram_clock[1] 118
+set_io sram_cs[1] 121
+set_io sram_sio[4] 116
+set_io sram_sio[5] 119
+set_io sram_sio[6] 117
+set_io sram_sio[7] 120
+
+#ADC multiplexer
+set_io adc_mux_en 96
+set_io adc_mux_s0 93
+set_io adc_mux_s1 94
+set_io adc_mux_s2 95
