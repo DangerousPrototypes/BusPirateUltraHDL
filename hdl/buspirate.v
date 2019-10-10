@@ -18,7 +18,7 @@ module top #(
   parameter MC_ADD_WIDTH = 6,
   parameter LA_WIDTH = 8,
   parameter LA_CHIPS = 2,
-  parameter BP_PINS = 5,
+  parameter BP_PINS = 8,
   parameter FIFO_WIDTH = 16,
   parameter FIFO_DEPTH = 512
 ) (
@@ -28,7 +28,7 @@ module top #(
   output wire[LA_CHIPS-1:0] sram_clock,
   output wire[LA_CHIPS-1:0] sram_cs,
   inout[LA_WIDTH-1:0] sram_sio,
-  output wire lat_oe,
+  //output wire lat_oe,
   input wire [LA_WIDTH-1:0] lat,
   input wire mcu_clock,
   input wire mcu_cs,
@@ -39,7 +39,9 @@ module top #(
   inout [MC_DATA_WIDTH-1:0] mc_data,
   output bp_active,
   output bp_fifo_in_full,
-  output bp_fifo_out_nempty
+  output bp_fifo_out_nempty,
+  output adc_mux_en,
+  output [2:0] adc_mux_s
   );
     //pll PLL_2F(clock,pll_clk,locked);
     //wires tied to the memory controller WE and OE signals
@@ -76,7 +78,7 @@ module top #(
       .bufdat_tristate_dout(bpio_tdo), //tristate data pin data out
       .bufdat_tristate_din(bpio_tdi)  //tristate data pin data in
       );
-      `define BP_PERIPHERAL_PINS 3
+      `define BP_PERIPHERAL_PINS 2
       assign bpio_do[BP_PINS-1:`BP_PERIPHERAL_PINS]=bpio_dio_port_d[BP_PINS-1:`BP_PERIPHERAL_PINS];
       //assign bpio_dir[BP_PINS-1:`BP_PERIPHERAL_PINS]=bpio_dio_tris_d[BP_PINS-1:`BP_PERIPHERAL_PINS];
       //assign bpio_dir[`BP_PERIPHERAL_PINS-1:0]=wreg[6'h01][`BP_PERIPHERAL_PINS-1+8:8];//`reg_bpio_dir[`BP_PERIPHERAL_PINS-1:0];
@@ -93,8 +95,12 @@ module top #(
     wire [MC_DATA_WIDTH-1:0] mc_dout;
     assign mc_dout=mc_dout_d;
 
+    // ADC multiplexer
+    assign adc_mux_en=`reg_adc_en;
+    assign adc_mux_s=`reg_adc_s;
+
     //LATCH OE
-    assign lat_oe=1'b0; //open latch, eleminated on next revision
+    //assign lat_oe=1'b0; //open latch, eleminated on next revision
     localparam N = 3;
     reg [N:0] count;
     reg reset;
@@ -244,7 +250,7 @@ module top #(
 
          case(bpsm_state)
              `STATE_IDLE: begin
-                 if(in_fifo_out_nempty) begin
+                 if(in_fifo_out_nempty&&!out_fifo_in_full) begin //check out_fifo not full because we slam the command back into the queue
                      bp_busy <= 1'b1;
                      //error <= 1'b0;
                      rreg[10]<=in_fifo_out_data;
@@ -265,7 +271,7 @@ module top #(
                            la_start<=1'b1;
                        `CMD_LASTOP:
                            la_start<=1'b0;
-                       `CMD_DIO_WRITE:
+                       `CMD_DIO_WRITE: //todo:change to set/clear/write...
                            bpio_dio_port_d<= in_fifo_out_data[BP_PINS-1:0];
                        /*`CMD_DIO_READ:
                           begin
@@ -304,10 +310,11 @@ module top #(
 
             `STATE_PERIPHERAL_WAIT: begin
                 out_fifo_in_shift<=1'b0; //THIS IS DANGEROUS! if peripheral is done by this point we wont have an extra clock before the next shift!!!! Keep this in mind!
-                peripheral_trigger <= 0;
+                peripheral_trigger <= 1'b0;
                 if (!peripheral_trigger && !peripheral_busy && !out_fifo_in_full) begin
                     bpsm_state <= `STATE_POP_FIFO;
-                    out_fifo_in_data_d=peripheral_data_out; //delay???
+                    out_fifo_in_data_d<={8'hFF,peripheral_data_out}; //delay???
+                    //out_fifo_in_data_d<=16'hFFFF; //delay???
                     out_fifo_in_shift<=1'b1;
                 end
             end

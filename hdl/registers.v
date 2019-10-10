@@ -32,6 +32,9 @@
 `define reg_fifo_out_pop wreg[6'h08][1]
 `define reg_fifo_in_test wreg[6'h09]
 
+`define reg_adc_en wreg[6'h0A][0]
+`define reg_adc_s wreg[6'h0A][3:1]
+
 //read registers
 `define reg_la_read rreg[6'h02]
 //`define reg_la_config wreg[6'h03]

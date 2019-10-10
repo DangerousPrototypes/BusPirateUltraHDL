@@ -11,7 +11,7 @@ module buspirate_tb();
   parameter MC_ADD_WIDTH = 6;
   parameter LA_WIDTH = 8;
   parameter LA_CHIPS = 2;
-  parameter BP_PINS = 5;
+  parameter BP_PINS = 8;
   parameter FIFO_WIDTH = 16;
   parameter FIFO_DEPTH = 256;
 
@@ -24,7 +24,7 @@ module buspirate_tb();
   wire [LA_CHIPS-1:0] sram_cs;
   wire [LA_WIDTH-1:0] sram_sio;
   reg [LA_WIDTH-1:0] sram_sio_d;
-  wire lat_oe;
+  //wire lat_oe;
   reg [LA_WIDTH-1:0] lat;
   reg mcu_clock;
   reg mcu_cs;
@@ -58,7 +58,7 @@ module buspirate_tb();
     .sram_clock(sram_clock),
     .sram_cs(sram_cs),
     .sram_sio(sram_sio),
-    .lat_oe(lat_oe),
+    //.lat_oe(lat_oe),
     .lat(lat),
     .mcu_clock(mcu_clock),
     .mcu_mosi(mcu_mosi),
@@ -112,7 +112,7 @@ module buspirate_tb();
       `WRITE(6'h07,16'h8100); //IO pins low
       `WRITE(6'h07,16'h08aa); //write SPI data
       `WRITE(6'h07,16'h08ff);
-      `WRITE(6'h07,16'hFD00);//halt command
+      //`WRITE(6'h07,16'hFD00);//halt command
       `WRITE(6'h07,16'h0800);
       `WRITE(6'h07,16'h840F); //delay 0x0f
       `WRITE(6'h07,16'h81FF); //IO pins high

@@ -114,6 +114,6 @@ set_io sram_sio[7] 120
 
 #ADC multiplexer
 set_io adc_mux_en 96
-set_io adc_mux_s0 93
-set_io adc_mux_s1 94
-set_io adc_mux_s2 95
+set_io adc_mux_s[0] 93
+set_io adc_mux_s[1] 94
+set_io adc_mux_s[2] 95

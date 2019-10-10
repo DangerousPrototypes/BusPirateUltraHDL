@@ -1,15 +1,15 @@
 [*]
 [*] GTKWave Analyzer v3.3.77 (w)1999-2016 BSI
-[*] Fri Aug 16 08:42:36 2019
+[*] Wed Oct 09 14:43:45 2019
 [*]
-[dumpfile] "C:\Users\ian\Desktop\buspirateultra\hdl\iobuffer\buspirate_tb.vcd"
-[dumpfile_mtime] "Fri Aug 16 08:33:54 2019"
-[dumpfile_size] 55685
-[savefile] "C:\Users\ian\Desktop\buspirateultra\hdl\iobuffer\buspirate_tb.gtkw"
-[timestart] 0
+[dumpfile] "C:\repos\BusPirateUltraHDL\hdl\buspirate_tb.vcd"
+[dumpfile_mtime] "Wed Oct 09 14:31:35 2019"
+[dumpfile_size] 77699
+[savefile] "C:\repos\BusPirateUltraHDL\hdl\buspirate_tb.gtkw"
+[timestart] 3218000
 [size] 1920 1017
 [pos] -1 -1
-*-18.147940 3370000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+*-18.147940 3851000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] buspirate_tb.
 [treeopen] buspirate_tb.buspirate.
 [sst_width] 211
@@ -49,10 +49,19 @@ buspirate_tb.buspirate.BPIO_BUF[2].din
 buspirate_tb.buspirate.BPIO_BUF[2].dout
 buspirate_tb.buspirate.SPI_MASTER.go
 buspirate_tb.buspirate.SPI_MASTER.mosi
+@22
+buspirate_tb.buspirate.out_fifo_in_data_d[15:0]
+buspirate_tb.buspirate.peripheral_data_out[7:0]
+@28
+buspirate_tb.buspirate.out_fifo_in_shift
+buspirate_tb.buspirate.peripheral_trigger
+buspirate_tb.buspirate.peripheral_busy
+@29
+buspirate_tb.buspirate.out_fifo_in_full
+@28
 buspirate_tb.buspirate.SPI_MASTER.state
 buspirate_tb.buspirate.SPI_MASTER.sclk
 buspirate_tb.buspirate.SPI_MASTER.rst
-@29
 buspirate_tb.buspirate.reset
 @200
 -FIFO_IN
