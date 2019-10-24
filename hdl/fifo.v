@@ -23,6 +23,7 @@ module fifo #(
 	parameter WIDTH = 16,
 	parameter DEPTH = 512
 ) (
+	input 								 reset,
 	input                  in_clock,
 	input                  in_shift,
 	input      [WIDTH-1:0] in_data,
@@ -56,7 +57,9 @@ module fifo #(
 	//assign out_data = out_nempty ? out_data_d : 0; //this is from Clifords example, but it won't automatically infer BRAM if we use it....
 
 	always @(posedge in_clock) begin
-		if (in_shift && !in_full) begin
+		if (reset) begin
+			in_pos<=0;
+		end else if(in_shift && !in_full) begin
 			memory[in_pos] <= in_data;
 			in_full <= (next_next_in_pos == out_pos);
 			in_nempty <= 1;
@@ -68,7 +71,9 @@ module fifo #(
 	end
 
 	always @(posedge out_clock) begin
-		if (out_pop && out_nempty) begin
+	if (reset) begin
+		out_pos<=0;
+	end else if (out_pop && out_nempty) begin
 			out_data <= memory[next_out_pos];
 			out_nempty <= (next_out_pos != in_pos);
 			out_pos <= next_out_pos;

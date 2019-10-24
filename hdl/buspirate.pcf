@@ -65,7 +65,7 @@ set_io mcu_miso 67 #MISO B14
 set_io bp_active 137 #C10 #AUX1
 set_io bp_fifo_in_full 136 #C11 #AUX2
 set_io bp_fifo_out_nempty 135 #C12 #AUX3
-set_io -nowarn mcu_aux4 134 #D6
+set_io bp_fifo_clear 134 #D6
 set_io -nowarn mcu_aux5 130 #B8
 set_io -nowarn mcu_aux6 125 #B9
 set_io -nowarn mcu_aux7 124 #E0

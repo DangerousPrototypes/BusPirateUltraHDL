@@ -40,6 +40,7 @@ module top #(
   output bp_active,
   output bp_fifo_in_full,
   output bp_fifo_out_nempty,
+  input bp_fifo_clear,
   output adc_mux_en,
   output [2:0] adc_mux_s
   );
@@ -131,6 +132,8 @@ module top #(
     `endif
 
     //FIFO
+    wire bp_fifo_clear_sync;
+    sync FIFO_CLEAR_SYNC(clock, bp_fifo_clear, bp_fifo_clear_sync);
     //IN FIFO
     wire [MC_DATA_WIDTH-1:0] in_fifo_out_data;
     wire in_fifo_in_nempty,in_fifo_out_nempty;
@@ -150,6 +153,7 @@ module top #(
       .WIDTH(FIFO_WIDTH),
       .DEPTH(FIFO_DEPTH)
     ) FIFO_IN (
+      .reset(bp_fifo_clear_sync),
       .in_clock(clock),
       .in_shift(in_fifo_in_shift),
       .in_data(mc_din),
@@ -160,6 +164,7 @@ module top #(
       .out_data(in_fifo_out_data),
       .out_nempty(in_fifo_out_nempty)
     ), FIFO_OUT (
+      .reset(bp_fifo_clear_sync),
       .in_clock(clock),
     	.in_shift(out_fifo_in_shift), //???
     	.in_data(out_fifo_in_data_d), // in data

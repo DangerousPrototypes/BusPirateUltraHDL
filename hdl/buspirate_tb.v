@@ -35,6 +35,7 @@ module buspirate_tb();
   wire [MC_DATA_WIDTH-1:0] mc_data;
   reg [MC_DATA_WIDTH-1:0] mc_data_reg;
   wire bp_active, bp_fifo_in_full,bp_fifo_out_nempty;
+  reg bp_fifo_clear;
 
   assign mc_data=(mc_oe)?mc_data_reg:16'hzzzz;
 
@@ -70,7 +71,8 @@ module buspirate_tb();
     .mc_data(mc_data),
     .bp_active(bp_active),
     .bp_fifo_in_full(bp_fifo_in_full),
-    .bp_fifo_out_nempty(bp_fifo_out_nempty)
+    .bp_fifo_out_nempty(bp_fifo_out_nempty),
+    .bp_fifo_clear(bp_fifo_clear)
     );
 
     //this simulates the 74LVC logic buffers so we can see the results in simulation
@@ -100,6 +102,7 @@ module buspirate_tb();
       mc_we<=1;
       mc_oe<=1;
       mc_ce<=0;
+      bp_fifo_clear<=0;
       @(negedge rst); // wait for reset
       repeat(10) @(posedge clk);
       //IO pins setup
@@ -118,6 +121,10 @@ module buspirate_tb();
       `WRITE(6'h07,16'h81FF); //IO pins high
       `WRITE(6'h07,16'hFF00); //stop logic analyzer
       `WRITE(6'h03,16'b00000000);//trigger BP SM
+      /*repeat(30)@(posedge clk);
+      bp_fifo_clear<=1;
+      repeat(4)@(posedge clk);
+      bp_fifo_clear<=0;*/
       repeat(100)@(posedge clk);
       `WRITE(6'h03,16'b00000000);//trigger BP SM
       repeat(200)@(posedge clk);
