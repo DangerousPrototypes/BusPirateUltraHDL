@@ -60,7 +60,7 @@ module buspirate_tb();
     .FIFO_DEPTH(FIFO_DEPTH)
     )buspirate(
     .clock(clk),
-    //.reset(rst),
+    .reset(rst),
     .bpio_buffer_io(bpio_buffer_io),
     .bpio_buffer_dir(bpio_buffer_dir),
     .bpio_buffer_od(bpio_buffer_od),

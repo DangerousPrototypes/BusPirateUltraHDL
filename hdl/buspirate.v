@@ -12,7 +12,7 @@
 `include "fifo.v"
 `include "adc.v"
 //`include "ram.v"
-`define SIMULATION
+//`define SIMULATION
 
 module top #(
   parameter MC_DATA_WIDTH = 16,
@@ -24,6 +24,7 @@ module top #(
   parameter FIFO_DEPTH = 512
 ) (
   input clock,
+  //input reset,
   inout wire [BP_PINS-1:0] bpio_buffer_io,
   output wire [BP_PINS-1:0] bpio_buffer_dir, bpio_buffer_od,
   output wire[LA_CHIPS-1:0] sram_clock,
@@ -105,7 +106,10 @@ module top #(
     assign adc_mux_s=`reg_adc_s;
 
     //LATCH OE
-    //assign lat_oe=1'b0; //open latch, eleminated on next revision
+    assign lat_oe=1'b0; //open latch
+    assign lat_dir=1'b0; //input to FPGA
+    assign pullup_enable=1'b0; //pullups disable
+
     localparam N = 3;
     reg [N:0] count;
     reg reset;
