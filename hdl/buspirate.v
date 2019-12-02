@@ -10,6 +10,7 @@
 `include "registers.v"
 `include "spimaster.v"
 `include "fifo.v"
+`include "adc.v"
 //`include "ram.v"
 `define SIMULATION
 
@@ -28,7 +29,7 @@ module top #(
   output wire[LA_CHIPS-1:0] sram_clock,
   output wire[LA_CHIPS-1:0] sram_cs,
   inout[LA_WIDTH-1:0] sram_sio,
-  //output wire lat_oe,
+  output wire lat_oe, lat_dir,
   input wire [LA_WIDTH-1:0] lat,
   input wire mcu_clock,
   input wire mcu_cs,
@@ -42,7 +43,10 @@ module top #(
   output bp_fifo_out_nempty,
   input bp_fifo_clear,
   output adc_mux_en,
-  output [2:0] adc_mux_s
+  output [3:0] adc_mux_s,
+  output adc_cs, adc_clock,
+  input adc_data,
+  output pullup_enable
   );
     //pll PLL_2F(clock,pll_clk,locked);
     //wires tied to the memory controller WE and OE signals
@@ -79,7 +83,7 @@ module top #(
       .bufdat_tristate_dout(bpio_tdo), //tristate data pin data out
       .bufdat_tristate_din(bpio_tdi)  //tristate data pin data in
       );
-      `define BP_PERIPHERAL_PINS 2
+      `define BP_PERIPHERAL_PINS 3
       assign bpio_do[BP_PINS-1:`BP_PERIPHERAL_PINS]=bpio_dio_port_d[BP_PINS-1:`BP_PERIPHERAL_PINS];
       //assign bpio_dir[BP_PINS-1:`BP_PERIPHERAL_PINS]=bpio_dio_tris_d[BP_PINS-1:`BP_PERIPHERAL_PINS];
       //assign bpio_dir[`BP_PERIPHERAL_PINS-1:0]=wreg[6'h01][`BP_PERIPHERAL_PINS-1+8:8];//`reg_bpio_dir[`BP_PERIPHERAL_PINS-1:0];
@@ -176,6 +180,25 @@ module top #(
     	.out_nempty(bp_fifo_out_nempty) //output reg out_nempty
     );
 
+    wire adc_busy;
+    reg adc_trigger;
+    wire [13:0] adc_data_out;
+    // ADC serial input module
+    adc ADC_SI (
+      // general control
+      	.rst(reset),				// resets module to known state
+      	.clkin(clock),				// clock that makes everyhting tick
+      // sync signals
+      	.go(adc_trigger),					// starts a SPI transmission
+      	.state(adc_busy),				// state of module (0=idle, 1=busy/transmitting)
+      // data in/out
+      	.data_o(adc_data_out),				// data out (will get received)
+      // spi signals
+      	.sclk(adc_clock),				// SPI clock (= clkin/2)
+      	.miso(adc_data),				// master in slave out
+      	.cs(adc_cs)					// chip select
+      );
+
     // SPI master
      spimaster SPI_MASTER(
      // general control
@@ -212,6 +235,8 @@ module top #(
     `define STATE_POP_FIFO 8
     `define STATE_CLEANUP 9
     `define STATE_HALT 10
+    `define STATE_ADC_WAIT 11
+
 
     `define CMD_PERIPHERAL_WRITE 8'b0???????
     `define CMD_LASTART 8'b11111110
@@ -221,8 +246,9 @@ module top #(
     `define CMD_DIO_READ 8'b10000010
     `define CMD_DIO_TRIS 8'b10000011
     `define CMD_DELAY 8'b10000100
+    `define CMD_ADC 8'b10000101
 
-    reg [$clog2(`STATE_HALT):0] bpsm_state;
+    reg [$clog2(`STATE_HALT):0] bpsm_state; //add next state and next next state???
 
     always @(posedge clock)
       begin
@@ -272,6 +298,11 @@ module top #(
                           peripheral_trigger <= 1'b1;
                           bpsm_state<=`STATE_PERIPHERAL_WAIT;
                           end
+                       `CMD_ADC:
+                          begin
+                          adc_trigger <= 1'b1;
+                          bpsm_state<=`STATE_ADC_WAIT;
+                          end
                        `CMD_LASTART:
                            la_start<=1'b1;
                        `CMD_LASTOP:
@@ -320,6 +351,16 @@ module top #(
                     bpsm_state <= `STATE_POP_FIFO;
                     out_fifo_in_data_d<={8'hFF,peripheral_data_out}; //delay???
                     //out_fifo_in_data_d<=16'hFFFF; //delay???
+                    out_fifo_in_shift<=1'b1;
+                end
+            end
+
+            `STATE_ADC_WAIT: begin
+                out_fifo_in_shift<=1'b0;
+                adc_trigger <= 1'b0;
+                if (!adc_trigger && !adc_busy && !out_fifo_in_full) begin
+                    bpsm_state <= `STATE_POP_FIFO;
+                    out_fifo_in_data_d<={4'h0,adc_data_out}; //delay???
                     out_fifo_in_shift<=1'b1;
                 end
             end

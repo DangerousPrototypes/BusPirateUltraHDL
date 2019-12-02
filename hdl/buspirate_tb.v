@@ -24,7 +24,7 @@ module buspirate_tb();
   wire [LA_CHIPS-1:0] sram_cs;
   wire [LA_WIDTH-1:0] sram_sio;
   reg [LA_WIDTH-1:0] sram_sio_d;
-  //wire lat_oe;
+  wire lat_oe, lat_dir;
   reg [LA_WIDTH-1:0] lat;
   reg mcu_clock;
   reg mcu_cs;
@@ -36,6 +36,14 @@ module buspirate_tb();
   reg [MC_DATA_WIDTH-1:0] mc_data_reg;
   wire bp_active, bp_fifo_in_full,bp_fifo_out_nempty;
   reg bp_fifo_clear;
+
+  wire adc_mux_en;
+  wire [3:0] adc_mux_s;
+  wire adc_cs, adc_clock;
+  reg adc_data;
+  wire pullup_enable;
+
+
 
   assign mc_data=(mc_oe)?mc_data_reg:16'hzzzz;
 
@@ -59,7 +67,8 @@ module buspirate_tb();
     .sram_clock(sram_clock),
     .sram_cs(sram_cs),
     .sram_sio(sram_sio),
-    //.lat_oe(lat_oe),
+    .lat_oe(lat_oe),
+    .lat_dir(lat_dir),
     .lat(lat),
     .mcu_clock(mcu_clock),
     .mcu_mosi(mcu_mosi),
@@ -72,7 +81,15 @@ module buspirate_tb();
     .bp_active(bp_active),
     .bp_fifo_in_full(bp_fifo_in_full),
     .bp_fifo_out_nempty(bp_fifo_out_nempty),
-    .bp_fifo_clear(bp_fifo_clear)
+    .bp_fifo_clear(bp_fifo_clear),
+    .adc_mux_en(adc_mux_en),
+    .adc_mux_s(adc_mux_s),
+    .adc_cs(adc_cs),
+    .adc_clock(adc_clock),
+    .adc_data(adc_data),
+    .pullup_enable(pullup_enable)
+
+
     );
 
     //this simulates the 74LVC logic buffers so we can see the results in simulation
@@ -103,6 +120,7 @@ module buspirate_tb();
       mc_oe<=1;
       mc_ce<=0;
       bp_fifo_clear<=0;
+      adc_data<=1'b1;
       @(negedge rst); // wait for reset
       repeat(10) @(posedge clk);
       //IO pins setup
@@ -113,6 +131,7 @@ module buspirate_tb();
       `WRITE(6'h07,16'hFE00);//start logic analyzer
       `WRITE(6'h07,16'h81FF);//IO pins high
       `WRITE(6'h07,16'h8100); //IO pins low
+      `WRITE(6'h07,16'h8500); //ADC measurement!!!!
       `WRITE(6'h07,16'h08aa); //write SPI data
       `WRITE(6'h07,16'h08ff);
       //`WRITE(6'h07,16'hFD00);//halt command
