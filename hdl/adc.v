@@ -9,6 +9,7 @@
 `ifndef __ADC__
 `define __ADC__
 `define ADC_BITS 14
+`define ADC_CALIBRATION_BITS 32
 module adc (
 // general control
 	rst,				// resets module to known state
@@ -16,6 +17,7 @@ module adc (
 // sync signals
 	go,					// starts a SPI transmission
 	state,				// state of module (0=idle, 1=busy/transmitting)
+	calibrate,
 // data in/out
 	data_o,				// data out (will get received)
 // spi signals
@@ -30,8 +32,12 @@ input clkin;
 
 input go;
 output reg state;
+input calibrate;
+
 output reg [`ADC_BITS-1:0] data_o;
-reg [3:0] bitcount;		// number of bits to transmit
+reg [4:0] bitcount;		// number of bits to transmit
+
+reg [2:0] delay;
 
 input miso;
 output reg sclk;
@@ -61,7 +67,11 @@ else
 					//sclk <= 1'b0;
 					cs <= 1'b0;			// cs line (auto?????)
 					data_o <= 16'h00;
-					bitcount <= `ADC_BITS-1;
+					delay<=3'b111;
+					if(calibrate===1'b1)
+						bitcount <= `ADC_CALIBRATION_BITS-1;
+					else
+						bitcount <= `ADC_BITS-1;
 				end
 			else //go === 1'b0
 				begin	//idle everything
@@ -74,17 +84,28 @@ else
 		begin
 			if(sclk === 1'b0)
 				begin //clock low, setup data and tick the clock line
-					sclk <= 1'b1;
+					delay<=delay-1;
+					if(delay===3'b000)
+						begin
+							sclk <= 1'b1;
+							delay<=3'b111;
+						end
 				end
 		  else
 				begin //clock high, read data and clear clock line
-					data_o[bitcount] <= miso;
-					sclk <= 1'b0;
-					bitcount <= bitcount - 1;
-					if(bitcount===4'b0000)
+					delay<=delay-1;
+					if(delay===3'b000)
 						begin
-							state<=1'b0;
-						end
+							if(calibrate===1'b0)
+								data_o[bitcount] <= miso;
+							sclk <= 1'b0;
+							bitcount <= bitcount - 1;
+							delay<=3'b111;
+							if(bitcount===0)
+								begin
+									state<=1'b0;
+								end
+							end
 				end
 		end
 	end

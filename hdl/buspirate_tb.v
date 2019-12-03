@@ -60,7 +60,7 @@ module buspirate_tb();
     .FIFO_DEPTH(FIFO_DEPTH)
     )buspirate(
     .clock(clk),
-    .reset(rst),
+    //.reset(rst),
     .bpio_buffer_io(bpio_buffer_io),
     .bpio_buffer_dir(bpio_buffer_dir),
     .bpio_buffer_od(bpio_buffer_od),
@@ -131,6 +131,7 @@ module buspirate_tb();
       `WRITE(6'h07,16'hFE00);//start logic analyzer
       `WRITE(6'h07,16'h81FF);//IO pins high
       `WRITE(6'h07,16'h8100); //IO pins low
+      `WRITE(6'h07,16'h8600); //ADC measurement!!!!
       `WRITE(6'h07,16'h8500); //ADC measurement!!!!
       `WRITE(6'h07,16'h08aa); //write SPI data
       `WRITE(6'h07,16'h08ff);

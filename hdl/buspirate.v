@@ -12,7 +12,7 @@
 `include "fifo.v"
 `include "adc.v"
 //`include "ram.v"
-//`define SIMULATION
+`define SIMULATION
 
 module top #(
   parameter MC_DATA_WIDTH = 16,
@@ -187,6 +187,7 @@ module top #(
     wire adc_busy;
     reg adc_trigger;
     wire [13:0] adc_data_out;
+    reg adc_calibrate;
     // ADC serial input module
     adc ADC_SI (
       // general control
@@ -195,6 +196,7 @@ module top #(
       // sync signals
       	.go(adc_trigger),					// starts a SPI transmission
       	.state(adc_busy),				// state of module (0=idle, 1=busy/transmitting)
+        .calibrate(adc_calibrate),
       // data in/out
       	.data_o(adc_data_out),				// data out (will get received)
       // spi signals
@@ -251,6 +253,7 @@ module top #(
     `define CMD_DIO_TRIS 8'b10000011
     `define CMD_DELAY 8'b10000100
     `define CMD_ADC 8'b10000101
+    `define CMD_ADC_CALIBRATE 8'b10000110
 
     reg [$clog2(`STATE_HALT):0] bpsm_state; //add next state and next next state???
 
@@ -304,9 +307,16 @@ module top #(
                           end
                        `CMD_ADC:
                           begin
+                          adc_calibrate<=1'b0;
                           adc_trigger <= 1'b1;
                           bpsm_state<=`STATE_ADC_WAIT;
                           end
+                       `CMD_ADC_CALIBRATE:
+                         begin
+                         adc_calibrate<=1'b1;
+                         adc_trigger <= 1'b1;
+                         bpsm_state<=`STATE_ADC_WAIT;
+                         end
                        `CMD_LASTART:
                            la_start<=1'b1;
                        `CMD_LASTOP:
