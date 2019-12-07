@@ -20,7 +20,7 @@ module top #(
   parameter LA_WIDTH = 8,
   parameter LA_CHIPS = 2,
   parameter BP_PINS = 8,
-  parameter FIFO_WIDTH = 16,
+  parameter FIFO_WIDTH = 17,
   parameter FIFO_DEPTH = 512
 ) (
   input clock,
@@ -228,7 +228,7 @@ module top #(
        //.cs(bpio_do[3])				     // chip select
        );
 
-    reg [7:0] delay_counter;
+    reg [15:0] delay_counter;
 
     `define STATE_IDLE   0
     `define STATE_WAIT    1
@@ -243,26 +243,35 @@ module top #(
     `define STATE_HALT 10
     `define STATE_ADC_WAIT 11
 
+    `define CMD_DIO_WRITE 8'h00
+    `define CMD_DIO_READ 8'h01
+    `define CMD_DIO_TRIS 8'h02
+    `define CMD_DIO_CONFIGURE 8'h0F
 
-    `define CMD_PERIPHERAL_WRITE 8'b0???????
-    `define CMD_LASTART 8'b11111110
-    `define CMD_LASTOP 8'b11111111
-    `define CMD_HALT 8'b11111101
-    `define CMD_DIO_WRITE 8'b10000001
-    `define CMD_DIO_READ 8'b10000010
-    `define CMD_DIO_TRIS 8'b10000011
-    `define CMD_DELAY 8'b10000100
-    `define CMD_ADC 8'b10000101
-    `define CMD_ADC_CALIBRATE 8'b10000110
+    `define CMD_PERIPHERAL_WRITE 8'h10
+    `define CMD_PERIPHERAL_READ 8'h11
+    `define CMD_PERIPHERAL_CONFIGURE 8'h1F
 
-    reg [$clog2(`STATE_HALT):0] bpsm_state; //add next state and next next state???
+    `define CMD_DELAY 8'h20
+
+    `define CMD_PWM_ON_PERIOD 8'h80
+    `define CMD_PWM_OFF_PERIOD 8'h81
+    `define CMD_PWM_CONFIGURE 8'h8F
+
+    `define CMD_ADC_READ 8'h90
+    `define CMD_ADC_CALIBRATE 8'h91
+
+    `define CMD_LA_START 8'hA0
+    `define CMD_LA_STOP 8'hA1
+    `define CMD_LA_READ_STATUS 8'hA3
+    `define CMD_LA_CONFIGURE 8'hAF
+
+    `define CMD_SM_HALT 8'hF0
+
+    reg [$clog2(`STATE_HALT):0] bpsm_command,bpsm_state,bpsm_next_state, bpsm_next_next_state; //add next state and next next state???
 
     always @(posedge clock)
       begin
-
-      rreg[9][$clog2(`STATE_HALT):0]<=bpsm_state;
-
-
       //some manual reset crap...need global reset pin, but this still may be needed accorting to various posts I've read
       if(reset_count<3) begin
         reset_count<=reset_count+1;
@@ -286,27 +295,110 @@ module top #(
        else
        begin
 
+           in_fifo_in_shift<=1'b0;
+           out_fifo_out_pop<=1'b0;
+           if(!mc_ce)
+           begin
+
+             if (mc_we_sync)			// write
+             begin
+               wreg[mc_add] <= mc_din;
+               case(mc_add)
+                 6'h00:in_fifo_in_shift<=1'b1;
+                 6'h01:sram_auto_clock_delay<=1'b1;
+               endcase
+             end
+
+             else if (mc_oe_sync)		// read
+             begin
+               case(mc_add)
+                 6'h00: begin
+                   mc_dout_d<=out_fifo_out_data;//remember if there is data in FIFO the first byte is already available
+                   out_fifo_out_pop<=1'b1;//pop when done with this word
+                 end
+                 6'h01:begin
+                   sram_auto_clock_delay<=1'b1; //is this really stable? don't we need delay betwee the clock and the reading of the results?
+                   mc_dout_d <= {8'h00,sram_sio_tdi}; //should move to if clock=1 in a clock delay?
+                 end
+                 6'h02:mc_dout_d[$clog2(`STATE_HALT):0]<=bpsm_state;
+               endcase
+             end
+           end// if we or oe
+         end //if ce
+
+         //this can be done with assign sram_auto_clock=we_last/mc_oe_sync && !current?
+         if(sram_auto_clock_delay)
+         begin
+           sram_auto_clock_delay<=1'b0;
+           sram_auto_clock<=1'b1;
+         end
+         else if(sram_auto_clock)
+         begin
+           sram_auto_clock<=1'b0;
+         end
+
+         //main bus pirate state machine
+         out_fifo_in_shift<=1'b0;
          case(bpsm_state)
+
              `STATE_IDLE: begin
+
                  if(in_fifo_out_nempty&&!out_fifo_in_full) begin //check out_fifo not full because we slam the command back into the queue
-                     bp_busy <= 1'b1;
-                     //error <= 1'b0;
-                     rreg[10]<=in_fifo_out_data;
+                    bp_busy <= 1'b1;
 
-                     //return the command so we can track progress from MCU
-                     out_fifo_in_data_d<=in_fifo_out_data;
-                     out_fifo_in_shift<=1'b1;
-                     bpsm_state<=`STATE_POP_FIFO; //default pop, otherwise handed to the next state forced below...
+                    if(in_fifo_out_data[16]===1'b1) begin //D/C bit high = command
+                      bpsm_command <= in_fifo_out_data[15:8];
+                      //return the command so we can track progress from MCU
+                      out_fifo_in_data_d<=in_fifo_out_data;
+                      out_fifo_in_shift<=1'b1;
+                      bpsm_state <= `STATE_POP_FIFO;
+                    end //end if command
 
-                     casez(in_fifo_out_data[15:8])
+                    else begin //begin else data
+
+                    bpsm_state<=`STATE_POP_FIFO; //default pop, otherwise handed to the next state forced below...
+
+                     case(bpsm_command)
+                       `CMD_DIO_WRITE: begin//todo:change to set/clear/write...
+                        bpio_dio_port_d<= in_fifo_out_data[BP_PINS-1:0];
+                       end
+                       /*`CMD_DIO_READ:
+                          begin
+                          out_fifo_in_data_d<=bpio_di;//this may need a delay!!!
+                          out_fifo_in_shift<=1'b1;
+                          end
+                       `CMD_DIO_TRIS:
+                           bpio_dio_tris_d <= in_fifo_out_data[BP_PINS-1:0];*/
+                       `CMD_DIO_CONFIGURE:
+                          `reg_dio_config <= in_fifo_out_data;
                        `CMD_PERIPHERAL_WRITE:
                           begin
                           peripheral_data_in_d <= in_fifo_out_data; //use extra register so we can pop the FIFO on this loop
                           peripheral_trigger <= 1'b1;
                           bpsm_state<=`STATE_PERIPHERAL_WAIT;
                           end
-                       `CMD_ADC:
+                       //`CMD_PERIPHERAL_READ:
+                       //`CMD_PERIPHERAL_CONFIGURE:
+                       `CMD_DELAY:
+                           begin
+                           delay_counter<=in_fifo_out_data;
+                           bpsm_state <= `STATE_DELAY;
+                           end
+                       `CMD_PWM_ON_PERIOD:
+                          `reg_pwm_on<=in_fifo_out_data;
+                       `CMD_PWM_OFF_PERIOD:
                           begin
+                          `reg_pwm_off<=in_fifo_out_data;
+                          pwm_reset<=1'b1;
+                          end
+                       `CMD_PWM_CONFIGURE: //6 bytes/3words [config/on] [on period] [off period]
+                          begin
+                          `reg_pwm_config <= in_fifo_out_data;
+                          pwm_reset<=1'b1;
+                          end
+                       `CMD_ADC_READ:
+                          begin
+                          //TODO: select MUX using this data word!!!
                           adc_calibrate<=1'b0;
                           adc_trigger <= 1'b1;
                           bpsm_state<=`STATE_ADC_WAIT;
@@ -321,21 +413,7 @@ module top #(
                            la_start<=1'b1;
                        `CMD_LASTOP:
                            la_start<=1'b0;
-                       `CMD_DIO_WRITE: //todo:change to set/clear/write...
-                           bpio_dio_port_d<= in_fifo_out_data[BP_PINS-1:0];
-                       /*`CMD_DIO_READ:
-                          begin
-                          out_fifo_in_data_d<=bpio_di;//this may need a delay!!!
-                          out_fifo_in_shift<=1'b1;
-                          end
-                       `CMD_DIO_TRIS:
-                           bpio_dio_tris_d <= in_fifo_out_data[BP_PINS-1:0];*/
-                       `CMD_DELAY:
-                           begin
-                           bpsm_state <= `STATE_DELAY;
-                           delay_counter<=in_fifo_out_data[7:0];
-                           end
-                      `CMD_HALT:
+                       `CMD_HALT:
                           bpsm_state <= `STATE_HALT;
                        default: begin
                            //$display("ERROR: unknown command!");
@@ -343,15 +421,18 @@ module top #(
                            //$stop;
                            //error<=1'b1;
                        end
-                   endcase
-               end else begin
-                   bp_busy <= 0;
-              end //if in_fifo_out_nempty
-           end //case STATE_IDLE
+                     endcase
+                    end //end else data
+
+                 end else begin //end if in_fifo_out_nempty, else set not busy
+                    bp_busy <= 1'b0;
+                 end
+
+             end //end STATE_IDLE
+
 
            `STATE_DELAY: begin
-                out_fifo_in_shift<=1'b0;
-                if (delay_counter == 0) begin
+                if (delay_counter === 0) begin
                     bpsm_state <= `STATE_POP_FIFO;
                 end else begin
                     delay_counter <= delay_counter - 1;
@@ -359,13 +440,11 @@ module top #(
             end
 
             `STATE_PERIPHERAL_WAIT: begin
-                out_fifo_in_shift<=1'b0; //THIS IS DANGEROUS! if peripheral is done by this point we wont have an extra clock before the next shift!!!! Keep this in mind!
                 peripheral_trigger <= 1'b0;
                 if (!peripheral_trigger && !peripheral_busy && !out_fifo_in_full) begin
-                    bpsm_state <= `STATE_POP_FIFO;
-                    out_fifo_in_data_d<={8'hFF,peripheral_data_out}; //delay???
-                    //out_fifo_in_data_d<=16'hFFFF; //delay???
+                    out_fifo_in_data_d<={8'h00,peripheral_data_out};
                     out_fifo_in_shift<=1'b1;
+                    bpsm_state <= `STATE_POP_FIFO;
                 end
             end
 
@@ -373,18 +452,11 @@ module top #(
                 out_fifo_in_shift<=1'b0;
                 adc_trigger <= 1'b0;
                 if (!adc_trigger && !adc_busy && !out_fifo_in_full) begin
-                    bpsm_state <= `STATE_POP_FIFO;
-                    out_fifo_in_data_d<={4'h0,adc_data_out}; //delay???
+                    out_fifo_in_data_d<={4'h0,adc_data_out};
                     out_fifo_in_shift<=1'b1;
+                    bpsm_state <= `STATE_POP_FIFO;
                 end
             end
-
-            //tried to deal with the issue above and gave up....
-            /*`STATE_RETURN_COMMAND: begin
-              out_fifo_in_shift<=1'b0;
-              bpsm_state<=bpsm_next_state;
-            end*/
-
 
             //when a word enters the FIFO and nempty goes high
             //that first word is already in the output
@@ -392,21 +464,20 @@ module top #(
             //so we need to pop at the end of acting on the command
             //there are several ways to save one clock but I'll worry about that later
             `STATE_POP_FIFO: begin
-                out_fifo_in_shift<=1'b0;
-                in_fifo_out_pop<=1'b1;
-                bpsm_state <= `STATE_CLEANUP;
+              out_fifo_in_shift<=1'b0;
+              in_fifo_out_pop<=1'b1;
+              bpsm_state <= `STATE_CLEANUP;
              end
 
              `STATE_CLEANUP: begin
-                 in_fifo_out_pop<=1'b0;
-                 bpsm_state <= `STATE_IDLE;
+               in_fifo_out_pop<=1'b0;
+               bpsm_state <= `STATE_IDLE;
               end
-            //TODO:THERE IS A CLOCK GLITCH ON RE-ENABLE!
+
             `STATE_HALT: begin
               `reg_bpsm_reset<=1'b1; //self reset
-                out_fifo_in_shift<=1'b0;
-                in_fifo_out_pop<=1'b1;
-                //bpsm_state <= `STATE_IDLE;
+              out_fifo_in_shift<=1'b0;
+              in_fifo_out_pop<=1'b1;
              end
 
           endcase //bpsm_state
@@ -414,16 +485,7 @@ module top #(
 
 
 
-        //this can be done with assign sram_auto_clock=we_last/mc_oe_sync && !current?
-        if(sram_auto_clock_delay)
-        begin
-          sram_auto_clock_delay<=1'b0;
-          sram_auto_clock<=1'b1;
-        end
-        else if(sram_auto_clock)
-        begin
-          sram_auto_clock<=1'b0;
-        end
+
 
         //TODO:
         //prescale to 0xff and capture to nearest 0xff
@@ -452,46 +514,7 @@ module top #(
         end
 
 
-        in_fifo_in_shift<=1'b0;
-        out_fifo_out_pop<=1'b0;
-        if(!mc_ce)
-        begin
 
-          if (mc_we_sync)			// write
-
-          begin
-            wreg[mc_add] <= mc_din;
-            case(mc_add)
-              6'h02:sram_auto_clock_delay<=1'b1;
-              6'h06:pwm_reset<=1'b1;
-              6'h07:in_fifo_in_shift<=1'b1;
-              default: begin end
-            endcase
-          end
-
-          else if (mc_oe_sync)		// read
-
-          begin
-            //mc_dout_d <= rreg[mc_add];
-            case(mc_add)
-              6'h02:begin
-                sram_auto_clock_delay<=1'b1; //is this really stable? don't we need delay betwee the clock and the reading of the results?
-                mc_dout_d <= {8'h00,sram_sio_tdi}; //should move to if clock=1 in a clock delay?
-              end
-              6'h03: mc_dout_d<=`reg_la_config;
-              6'h07: begin
-                mc_dout_d<=out_fifo_out_data;//remember if there is data in FIFO the first byte is already available
-                out_fifo_out_pop<=1'b1;//pop when done with this word
-              end
-              default:mc_dout_d <= rreg[mc_add];
-            endcase
-          end
-          /*else if (sram_auto_clock)begin
-            sram_auto_clock<=1'b0;
-            mc_dout_d <= {8'h00,sram_sio_tdi};
-          end*/
-        end// if we or oe
-      end //if ce
 
 
     //define the tristate data pin explicitly in the top module
