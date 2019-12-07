@@ -242,6 +242,7 @@ module top #(
     `define STATE_CLEANUP 9
     `define STATE_HALT 10
     `define STATE_ADC_WAIT 11
+    `define STATE_LA_READ_STATUS 12
 
     `define CMD_DIO_WRITE 8'h00
     `define CMD_DIO_READ 8'h01
@@ -267,6 +268,9 @@ module top #(
     `define CMD_LA_CONFIGURE 8'hAF
 
     `define CMD_SM_HALT 8'hF0
+
+    //TODO: register struture with STATE_WRITE_REG and STATE_READ_REG lower 8 bits {start,length}
+    //made register write/read generic!!!
 
     reg [$clog2(`STATE_HALT):0] bpsm_command,bpsm_state,bpsm_next_state, bpsm_next_next_state; //add next state and next next state???
 
@@ -348,6 +352,7 @@ module top #(
 
                     if(in_fifo_out_data[16]===1'b1) begin //D/C bit high = command
                       bpsm_command <= in_fifo_out_data[15:8];
+                      bpsm_command_lower <=in_fifo_out_data[7:0];
                       //return the command so we can track progress from MCU
                       out_fifo_in_data_d<=in_fifo_out_data;
                       out_fifo_in_shift<=1'b1;
@@ -409,12 +414,24 @@ module top #(
                          adc_trigger <= 1'b1;
                          bpsm_state<=`STATE_ADC_WAIT;
                          end
-                       `CMD_LASTART:
+                       `CMD_LA_START:
                            la_start<=1'b1;
-                       `CMD_LASTOP:
+                       `CMD_LA_STOP:
                            la_start<=1'b0;
+                       `CMD_LA_READ_STATUS:
+                          bpsm_state <= `STATE_LA_READ_STATUS;
                        `CMD_HALT:
                           bpsm_state <= `STATE_HALT;
+                      `CMD_WRITE_REGISTER: begin
+                        reg_index<=bpsm_command_lower[7:4];
+                        reg_count<=bpsm_command_lower[3:0];
+                        bpsm_state<= `STATE_WRITE_REGISTER;
+                        end
+                        `CMD_READ_REGISTER: begin
+                          reg_index<=bpsm_command_lower[7:4];
+                          reg_count<=bpsm_command_lower[3:0];
+                          bpsm_state<= `STATE_READ_REGISTER;
+                          end
                        default: begin
                            //$display("ERROR: unknown command!");
                            //$display(bpsm_state);
@@ -429,7 +446,6 @@ module top #(
                  end
 
              end //end STATE_IDLE
-
 
            `STATE_DELAY: begin
                 if (delay_counter === 0) begin
@@ -457,6 +473,32 @@ module top #(
                     bpsm_state <= `STATE_POP_FIFO;
                 end
             end
+
+            `STATE_WRITE_REGISTER: begin
+               if(in_fifo_out_shift===1'b1) begin
+                 in_fifo_out_shift<=1'b0;
+                 reg_index<=reg_index+1;
+                 reg_count<=reg_count-1;
+                 if(reg_count===0)
+                    bpsm_state <= `STATE_IDLE;
+               end
+               else if (in_fifo_out_nempty) begin
+                   registers[reg_index]<=in_fifo_out_data_d;
+                   in_fifo_out_shift<=1'b1;
+               end
+
+               `STATE_READ_REGISTER: begin
+                  if(out_fifo_in_shift===1'b1) begin
+                    out_fifo_in_shift<=1'b0;
+                    reg_index<=reg_index+1;
+                    reg_count<=reg_count-1;
+                    if(reg_count===0)
+                       bpsm_state <= `STATE_IDLE;
+                  end
+                  else if (!out_fifo_in_full) begin
+                      out_fifo_in_data_d<=registers[reg_index];
+                      out_fifo_in_shift<=1'b1;
+                  end
 
             //when a word enters the FIFO and nempty goes high
             //that first word is already in the output
