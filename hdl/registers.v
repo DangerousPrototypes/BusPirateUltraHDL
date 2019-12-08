@@ -1,49 +1,34 @@
 `ifndef __REGISTERS__
 `define __REGISTERS__
 
-//write registers
-`define reg_bpio_oe wreg[6'h00][BP_PINS-1:0]
-`define reg_bpio_od wreg[6'h00][BP_PINS-1+8:8]
-`define reg_bpio_hl wreg[6'h01][BP_PINS-1:0]
-`define reg_bpio_dir wreg[6'h01][BP_PINS-1+8:8]
+`define REG_BPIO_OE config_register[4'h0][BP_PINS-1:0]
 
-`define reg_la_write wreg[6'h02]
+`define REG_BPIO_OD config_register[4'h1][BP_PINS-1:0]
 
-`define reg_la_config wreg[6'h03]
-`define reg_la_io_quad wreg[6'h03][0]
-`define reg_la_io_quad_direction wreg[6'h03][1]
-`define reg_la_io_spi wreg[6'h03][2]
-`define reg_la_clear_sample_counter wreg[6'h03][3]
-`define reg_la_start wreg[6'h03][4]
-`define reg_la_active wreg[6'h03][5]
-`define reg_la_max_samples_reached wreg[6'h03][6]
-`define reg_bpsm_reset wreg[6'h03][7]
+`define REG_HW_CONFIG config_register[4'h2]
+`define REG_HW_CONFIG_PULLUPS_EN config_register[4'h2][0]
 
-`define reg_la_io_cs0 wreg[6'h03][8] //reserve upper bits for more SRAMs
-`define reg_la_io_cs1 wreg[6'h03][9]
+`define REG_LA_CONFIG config_register[4'h3]
+`define reg_la_io_quad config_register[4'h3][0]
+`define reg_la_io_quad_direction config_register[4'h3][1]
+`define reg_la_io_spi config_register[4'h3][2]
+`define reg_la_clear_sample_counter config_register[4'h3][3]
+`define reg_la_active config_register[4'h3][5]
+`define reg_la_max_samples_reached config_register[4'h3][6]
+`define reg_bpsm_reset config_register[4'h3][7]
 
-//`define reg_la_sample_count wreg[6'h04]
+`define reg_la_io_cs0 config_register[4'h3][8] //reserve upper bits for more SRAMs
+`define reg_la_io_cs1 config_register[4'h3][9]
 
-`define reg_pwm_on wreg[6'h05]
-`define reg_pwm_off wreg[6'h06]
+`define reg_la_sample_count rreg[4'h4]
 
-`define reg_fifo_in wreg[6'h07]
-`define reg_fifo_in_shift wreg[6'h08][0]
-`define reg_fifo_out_pop wreg[6'h08][1]
-`define reg_fifo_in_test wreg[6'h09]
+`define REG_ADC_CALIBRATE config_register[4'hA][0]
 
-`define reg_adc_en wreg[6'h0A][0]
-`define reg_adc_s wreg[6'h0A][4:1]
+`define REG_PERIPHERAL_0 config_register[4'hC]
+`define REG_PERIPHERAL_1 config_register[4'hD]
+`define REG_PERIPHERAL_2 config_register[4'hE]
+`define REG_PERIPHERAL_3 config_register[4'hF]
 
-//read registers
-`define reg_la_read rreg[6'h02]
-//`define reg_la_config wreg[6'h03]
-`define reg_la_sample_count rreg[6'h04]
-`define reg_fifo_out rreg[6'h07]
-`define reg_fifo_status rreg[6'h08]
-`define reg_fifo_status_full rreg[6'h08][0]
-`define reg_fifo_status_nempty rreg[6'h08][1]
-`define reg_fifo_status_out_nempty rreg[6'h08][2]
 
 
 `endif

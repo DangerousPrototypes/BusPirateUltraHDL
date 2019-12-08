@@ -20,7 +20,7 @@ module top #(
   parameter LA_WIDTH = 8,
   parameter LA_CHIPS = 2,
   parameter BP_PINS = 8,
-  parameter FIFO_WIDTH = 17,
+  parameter FIFO_WIDTH = 16,
   parameter FIFO_DEPTH = 512
 ) (
   input clock,
@@ -50,14 +50,17 @@ module top #(
   output pullup_enable
   );
     //pll PLL_2F(clock,pll_clk,locked);
+
+    // CONFIGURATION REGISTERS
+    reg [MC_DATA_WIDTH-1:0] config_register [15:0];
+    reg [3:0] reg_count, reg_index;
+
     //wires tied to the memory controller WE and OE signals
     wire mc_we_sync,mc_oe_sync,mc_ce_sync;
     sync MC_WE_SYNC(clock, mc_we, mc_we_sync);
     sync MC_OE_SYNC(clock, mc_oe, mc_oe_sync);
     sync MC_CE_SYNC(clock, mc_ce, mc_ce_sync);
-    // memory regs
-    reg [MC_DATA_WIDTH-1:0] wreg [32:0];
-    reg [MC_DATA_WIDTH-1:0] rreg [32:0];
+
     // Tristate pin handling
     // Bus Pirate IO pins
     wire [BP_PINS-1:0] bpio_toe, bpio_tdo, bpio_tdi;
@@ -72,9 +75,9 @@ module top #(
     //TODO: register for alt or io mode like STM...
     iobuf BPIO_BUF[BP_PINS-1:0] (
       //interface
-      .oe(`reg_bpio_oe), //bp_oe//output enable 1=true
-      .od(`reg_bpio_od), //open drain 1=true
-      .dir(`reg_bpio_dir),//direction 1=input
+      .oe(`REG_BPIO_OE), //bp_oe//output enable 1=true
+      .od(`REG_BPIO_OD), //open drain 1=true
+      .dir(bpio_dio_tris_d),//direction 1=input
       .din(bpio_do),//data in (value when buffer is output)
       .dout(bpio_di),//data out (value when buffer is input)
       //hardware driver
@@ -92,7 +95,8 @@ module top #(
     //TODO: N:1 mux freq measure and PWM on IO pins?
     wire pwm_out;
     reg pwm_reset;
-    pwm PWM_OUT(pwm_reset, count[0],pwm_out, `reg_pwm_on,`reg_pwm_off);
+    reg [15:0] pwm_on,pwm_off;
+    pwm PWM_OUT(pwm_reset,clock,pwm_out,pwm_on,pwm_off);
     //assign bpio_do[4]=pwm_out;
 
   	// Memory controller interface
@@ -101,49 +105,38 @@ module top #(
     wire [MC_DATA_WIDTH-1:0] mc_dout;
     assign mc_dout=mc_dout_d;
 
-    // ADC multiplexer
-    assign adc_mux_en=`reg_adc_en;
-    assign adc_mux_s=`reg_adc_s;
-
     //LATCH OE
     assign lat_oe=1'b0; //open latch
     assign lat_dir=1'b0; //input to FPGA
-    assign pullup_enable=1'b0; //pullups disable
 
-    localparam N = 3;
-    reg [N:0] count;
+    // PULLUP RESISTORS
+    assign pullup_enable=`REG_HW_CONFIG_PULLUPS_EN; //pullups disable
+
     reg reset;
     reg [2:0] reset_count;
     //1111 0100 0010 0100 0000 0000
-    reg [7:0] la_sample_prescaler;
+
 
     wire [LA_WIDTH-1:0] sram_sio_tdi;
     wire [LA_WIDTH-1:0] sram_sio_tdo;
 
+    reg [7:0] sram_out_d;
     reg la_start;
     wire sram_clock_source;
     reg sram_auto_clock, sram_auto_clock_delay;
     assign sram_clock_source=(la_start&&`reg_la_active)?clock:(`reg_la_io_quad)?sram_auto_clock:(`reg_la_io_spi)?mcu_clock:1'b0;
     assign sram_clock={sram_clock_source,sram_clock_source};
     assign sram_cs=(la_start&&`reg_la_active)?2'b00:{`reg_la_io_cs1,`reg_la_io_cs0}; //TODO: hold CS low during active?
-    assign sram_sio_tdo[0]=(la_start&&`reg_la_active)?lat[0]:`reg_la_io_quad?`reg_la_write[0]:mcu_mosi;
-    assign sram_sio_tdo[4]=(la_start&&`reg_la_active)?lat[4]:`reg_la_io_quad?`reg_la_write[4]:mcu_mosi;
-    assign {sram_sio_tdo[7:5],sram_sio_tdo[3:1]}=(la_start&&`reg_la_active)?{lat[7:5],lat[3:1]}:{`reg_la_write[7:5],`reg_la_write[3:1]};
+    assign sram_sio_tdo[0]=(la_start&&`reg_la_active)?lat[0]:`reg_la_io_quad?sram_out_d[0]:mcu_mosi;
+    assign sram_sio_tdo[4]=(la_start&&`reg_la_active)?lat[4]:`reg_la_io_quad?sram_out_d[4]:mcu_mosi;
+    assign {sram_sio_tdo[7:5],sram_sio_tdo[3:1]}=(la_start&&`reg_la_active)?{lat[7:5],lat[3:1]}:{sram_out_d[7:5],sram_out_d[3:1]};
     assign mcu_miso=!`reg_la_io_cs0?sram_sio_tdi[1]:sram_sio_tdi[5]; //very hack dont like
-
-    //for simulation debugging...
-    `ifdef SIMULATION
-      wire [15:0] reg_la_sample_count;
-      assign reg_la_sample_count=`reg_la_sample_count;
-      //wire [15:0] FPGA_REG_04;
-      //assign FPGA_REG_04=rreg[6'h04];
-    `endif
 
     //FIFO
     wire bp_fifo_clear_sync;
     sync FIFO_CLEAR_SYNC(clock, bp_fifo_clear, bp_fifo_clear_sync);
     //IN FIFO
-    wire [MC_DATA_WIDTH-1:0] in_fifo_out_data;
+    wire [MC_DATA_WIDTH:0] in_fifo_out_data;
     wire in_fifo_in_nempty,in_fifo_out_nempty;
     reg in_fifo_in_shift,in_fifo_out_pop;
     //OUT FIFO
@@ -158,20 +151,24 @@ module top #(
     reg [15:0] peripheral_data_in_d;
 
     fifo #(
-      .WIDTH(FIFO_WIDTH),
+      .WIDTH(FIFO_WIDTH+1),
       .DEPTH(FIFO_DEPTH)
     ) FIFO_IN (
       .reset(bp_fifo_clear_sync),
       .in_clock(clock),
       .in_shift(in_fifo_in_shift),
-      .in_data(mc_din),
+      .in_data({mc_add[0],mc_din}), //bit 0 of MC address is command/data indicator
       .in_full(bp_fifo_in_full),
       .in_nempty(in_fifo_in_nempty),
       .out_clock(clock),
       .out_pop(in_fifo_out_pop),
       .out_data(in_fifo_out_data),
       .out_nempty(in_fifo_out_nempty)
-    ), FIFO_OUT (
+    );
+    fifo #(
+      .WIDTH(FIFO_WIDTH),
+      .DEPTH(FIFO_DEPTH)
+    ) FIFO_OUT (
       .reset(bp_fifo_clear_sync),
       .in_clock(clock),
     	.in_shift(out_fifo_in_shift), //???
@@ -184,10 +181,15 @@ module top #(
     	.out_nempty(bp_fifo_out_nempty) //output reg out_nempty
     );
 
+    // ADC multiplexer
+    reg adc_mux_en_d;
+    reg [3:0] adc_mux_s_d;
+    assign adc_mux_en=adc_mux_en_d;
+    assign adc_mux_s=adc_mux_s_d;
+    // ADC
     wire adc_busy;
     reg adc_trigger;
     wire [13:0] adc_data_out;
-    reg adc_calibrate;
     // ADC serial input module
     adc ADC_SI (
       // general control
@@ -196,7 +198,7 @@ module top #(
       // sync signals
       	.go(adc_trigger),					// starts a SPI transmission
       	.state(adc_busy),				// state of module (0=idle, 1=busy/transmitting)
-        .calibrate(adc_calibrate),
+        .calibrate(`REG_ADC_CALIBRATE),
       // data in/out
       	.data_o(adc_data_out),				// data out (will get received)
       // spi signals
@@ -232,47 +234,40 @@ module top #(
 
     `define STATE_IDLE   0
     `define STATE_WAIT    1
-    `define STATE_LASTART   2
-    `define STATE_LASTOP 3
-    `define STATE_DIO_WRITE 4
-    `define STATE_DIO_READ 5
-    `define STATE_DELAY 6
-    `define STATE_PERIPHERAL_WAIT 7
-    `define STATE_POP_FIFO 8
-    `define STATE_CLEANUP 9
-    `define STATE_HALT 10
-    `define STATE_ADC_WAIT 11
-    `define STATE_LA_READ_STATUS 12
+    `define STATE_DELAY 2
+    `define STATE_PERIPHERAL_WAIT 3
+    `define STATE_POP_FIFO 4
+    `define STATE_CLEANUP 5
+    `define STATE_HALT 6
+    `define STATE_ADC_WAIT 7
+    `define STATE_LA_READ_STATUS 8
+    `define STATE_READ_REGISTER 9
 
     `define CMD_DIO_WRITE 8'h00
     `define CMD_DIO_READ 8'h01
     `define CMD_DIO_TRIS 8'h02
-    `define CMD_DIO_CONFIGURE 8'h0F
 
-    `define CMD_PERIPHERAL_WRITE 8'h10
-    `define CMD_PERIPHERAL_READ 8'h11
-    `define CMD_PERIPHERAL_CONFIGURE 8'h1F
+    `define CMD_PERIPHERAL_WRITE 8'h03
+    `define CMD_PERIPHERAL_READ 8'h04
 
-    `define CMD_DELAY 8'h20
+    `define CMD_DELAY 8'h05
 
-    `define CMD_PWM_ON_PERIOD 8'h80
-    `define CMD_PWM_OFF_PERIOD 8'h81
-    `define CMD_PWM_CONFIGURE 8'h8F
+    `define CMD_PWM_ON_PERIOD 8'h06
+    `define CMD_PWM_OFF_PERIOD 8'h07
 
-    `define CMD_ADC_READ 8'h90
-    `define CMD_ADC_CALIBRATE 8'h91
+    `define CMD_ADC_READ 8'h08
 
-    `define CMD_LA_START 8'hA0
-    `define CMD_LA_STOP 8'hA1
-    `define CMD_LA_READ_STATUS 8'hA3
-    `define CMD_LA_CONFIGURE 8'hAF
+    `define CMD_LA_START 8'h09
+    `define CMD_LA_STOP 8'h0A
 
-    `define CMD_SM_HALT 8'hF0
+    `define CMD_REGISTER_SET_POINTER 8'h0B
+    `define CMD_REGISTER_WRITE 8'h0C
+    `define CMD_REGISTER_READ 8'h0D
 
-    //TODO: register struture with STATE_WRITE_REG and STATE_READ_REG lower 8 bits {start,length}
-    //made register write/read generic!!!
+    `define CMD_SM_HALT 8'h0F
 
-    reg [$clog2(`STATE_HALT):0] bpsm_command,bpsm_state,bpsm_next_state, bpsm_next_next_state; //add next state and next next state???
+    reg [$clog2(`STATE_HALT):0] bpsm_state; //,bpsm_next_state, bpsm_next_next_state;
+    reg [$clog2(`CMD_SM_HALT):0] bpsm_command;
 
     always @(posedge clock)
       begin
@@ -280,21 +275,18 @@ module top #(
       if(reset_count<3) begin
         reset_count<=reset_count+1;
         reset<=1'b1;
-        rreg[9]<=16'h00;
       end
       else
       begin
         reset<=1'b0;
       end
 
-      count <= count + 1;
-      pwm_reset<=1'b0;
-
       if(`reg_bpsm_reset||reset) begin
            bpsm_state <= `STATE_IDLE;
            peripheral_trigger <= 1'b0;
            out_fifo_in_shift<=1'b0;
            in_fifo_out_pop<=1'b0;
+           adc_mux_en_d<=1'b1;
        end
        else
        begin
@@ -306,10 +298,10 @@ module top #(
 
              if (mc_we_sync)			// write
              begin
-               wreg[mc_add] <= mc_din;
                case(mc_add)
                  6'h00:in_fifo_in_shift<=1'b1;
-                 6'h01:sram_auto_clock_delay<=1'b1;
+                 6'h01:in_fifo_in_shift<=1'b1;
+                 6'h02:sram_auto_clock_delay<=1'b1;
                endcase
              end
 
@@ -320,18 +312,22 @@ module top #(
                    mc_dout_d<=out_fifo_out_data;//remember if there is data in FIFO the first byte is already available
                    out_fifo_out_pop<=1'b1;//pop when done with this word
                  end
-                 6'h01:begin
+                 6'h01: begin
+                   mc_dout_d<=out_fifo_out_data;//remember if there is data in FIFO the first byte is already available
+                   out_fifo_out_pop<=1'b1;//pop when done with this word
+                 end
+                 6'h02:begin
                    sram_auto_clock_delay<=1'b1; //is this really stable? don't we need delay betwee the clock and the reading of the results?
                    mc_dout_d <= {8'h00,sram_sio_tdi}; //should move to if clock=1 in a clock delay?
                  end
-                 6'h02:mc_dout_d[$clog2(`STATE_HALT):0]<=bpsm_state;
+                 6'h03:mc_dout_d[$clog2(`STATE_HALT):0]<=bpsm_state;
                endcase
              end
            end// if we or oe
          end //if ce
 
          //this can be done with assign sram_auto_clock=we_last/mc_oe_sync && !current?
-         if(sram_auto_clock_delay)
+         /*if(sram_auto_clock_delay)
          begin
            sram_auto_clock_delay<=1'b0;
            sram_auto_clock<=1'b1;
@@ -339,10 +335,9 @@ module top #(
          else if(sram_auto_clock)
          begin
            sram_auto_clock<=1'b0;
-         end
+         end*/
 
          //main bus pirate state machine
-         out_fifo_in_shift<=1'b0;
          case(bpsm_state)
 
              `STATE_IDLE: begin
@@ -351,8 +346,7 @@ module top #(
                     bp_busy <= 1'b1;
 
                     if(in_fifo_out_data[16]===1'b1) begin //D/C bit high = command
-                      bpsm_command <= in_fifo_out_data[15:8];
-                      bpsm_command_lower <=in_fifo_out_data[7:0];
+                      bpsm_command <= in_fifo_out_data[$clog2(`CMD_SM_HALT):0];
                       //return the command so we can track progress from MCU
                       out_fifo_in_data_d<=in_fifo_out_data;
                       out_fifo_in_shift<=1'b1;
@@ -367,69 +361,49 @@ module top #(
                        `CMD_DIO_WRITE: begin//todo:change to set/clear/write...
                         bpio_dio_port_d<= in_fifo_out_data[BP_PINS-1:0];
                        end
-                       /*`CMD_DIO_READ:
+                       `CMD_DIO_READ:
                           begin
                           out_fifo_in_data_d<=bpio_di;//this may need a delay!!!
                           out_fifo_in_shift<=1'b1;
                           end
                        `CMD_DIO_TRIS:
-                           bpio_dio_tris_d <= in_fifo_out_data[BP_PINS-1:0];*/
-                       `CMD_DIO_CONFIGURE:
-                          `reg_dio_config <= in_fifo_out_data;
-                       `CMD_PERIPHERAL_WRITE:
-                          begin
+                           bpio_dio_tris_d <= in_fifo_out_data[BP_PINS-1:0];
+                       `CMD_PERIPHERAL_WRITE: begin
                           peripheral_data_in_d <= in_fifo_out_data; //use extra register so we can pop the FIFO on this loop
                           peripheral_trigger <= 1'b1;
                           bpsm_state<=`STATE_PERIPHERAL_WAIT;
                           end
                        //`CMD_PERIPHERAL_READ:
-                       //`CMD_PERIPHERAL_CONFIGURE:
-                       `CMD_DELAY:
-                           begin
+                       `CMD_DELAY:begin
                            delay_counter<=in_fifo_out_data;
                            bpsm_state <= `STATE_DELAY;
                            end
                        `CMD_PWM_ON_PERIOD:
-                          `reg_pwm_on<=in_fifo_out_data;
-                       `CMD_PWM_OFF_PERIOD:
-                          begin
-                          `reg_pwm_off<=in_fifo_out_data;
+                          pwm_on<=in_fifo_out_data;
+                       `CMD_PWM_OFF_PERIOD:begin
+                          pwm_off<=in_fifo_out_data;
                           pwm_reset<=1'b1;
                           end
-                       `CMD_PWM_CONFIGURE: //6 bytes/3words [config/on] [on period] [off period]
-                          begin
-                          `reg_pwm_config <= in_fifo_out_data;
-                          pwm_reset<=1'b1;
-                          end
-                       `CMD_ADC_READ:
-                          begin
-                          //TODO: select MUX using this data word!!!
-                          adc_calibrate<=1'b0;
+                       `CMD_ADC_READ: begin
+                          adc_mux_en_d<=1'b0;
+                          adc_mux_s_d<=in_fifo_out_data[3:0];
                           adc_trigger <= 1'b1;
                           bpsm_state<=`STATE_ADC_WAIT;
                           end
-                       `CMD_ADC_CALIBRATE:
-                         begin
-                         adc_calibrate<=1'b1;
-                         adc_trigger <= 1'b1;
-                         bpsm_state<=`STATE_ADC_WAIT;
-                         end
-                       `CMD_LA_START:
+                        `CMD_LA_START:
                            la_start<=1'b1;
-                       `CMD_LA_STOP:
+                        `CMD_LA_STOP:
                            la_start<=1'b0;
-                       `CMD_LA_READ_STATUS:
-                          bpsm_state <= `STATE_LA_READ_STATUS;
-                       `CMD_HALT:
+                        `CMD_SM_HALT:
                           bpsm_state <= `STATE_HALT;
-                      `CMD_WRITE_REGISTER: begin
-                        reg_index<=bpsm_command_lower[7:4];
-                        reg_count<=bpsm_command_lower[3:0];
-                        bpsm_state<= `STATE_WRITE_REGISTER;
+                        `CMD_REGISTER_SET_POINTER:
+                          reg_index <= in_fifo_out_data[3:0];
+                        `CMD_REGISTER_WRITE: begin
+                          config_register[reg_index]<=in_fifo_out_data;
+                          reg_index<=reg_index+1;
                         end
-                        `CMD_READ_REGISTER: begin
-                          reg_index<=bpsm_command_lower[7:4];
-                          reg_count<=bpsm_command_lower[3:0];
+                        `CMD_REGISTER_READ: begin
+                          reg_count<=in_fifo_out_data[3:0];
                           bpsm_state<= `STATE_READ_REGISTER;
                           end
                        default: begin
@@ -474,31 +448,19 @@ module top #(
                 end
             end
 
-            `STATE_WRITE_REGISTER: begin
-               if(in_fifo_out_shift===1'b1) begin
-                 in_fifo_out_shift<=1'b0;
-                 reg_index<=reg_index+1;
-                 reg_count<=reg_count-1;
-                 if(reg_count===0)
-                    bpsm_state <= `STATE_IDLE;
-               end
-               else if (in_fifo_out_nempty) begin
-                   registers[reg_index]<=in_fifo_out_data_d;
-                   in_fifo_out_shift<=1'b1;
-               end
-
-               `STATE_READ_REGISTER: begin
-                  if(out_fifo_in_shift===1'b1) begin
-                    out_fifo_in_shift<=1'b0;
-                    reg_index<=reg_index+1;
-                    reg_count<=reg_count-1;
-                    if(reg_count===0)
-                       bpsm_state <= `STATE_IDLE;
-                  end
-                  else if (!out_fifo_in_full) begin
-                      out_fifo_in_data_d<=registers[reg_index];
-                      out_fifo_in_shift<=1'b1;
-                  end
+           `STATE_READ_REGISTER: begin
+              if(out_fifo_in_shift===1'b1) begin
+                out_fifo_in_shift<=1'b0;
+                reg_index<=reg_index+1;
+                reg_count<=reg_count-1;
+                if(reg_count===0)
+                   bpsm_state <= `STATE_IDLE;
+              end
+              else if (!out_fifo_in_full) begin
+                  out_fifo_in_data_d<=config_register[reg_index];
+                  out_fifo_in_shift<=1'b1;
+              end
+            end
 
             //when a word enters the FIFO and nempty goes high
             //that first word is already in the output
@@ -506,6 +468,7 @@ module top #(
             //so we need to pop at the end of acting on the command
             //there are several ways to save one clock but I'll worry about that later
             `STATE_POP_FIFO: begin
+              pwm_reset<=1'b0;
               out_fifo_in_shift<=1'b0;
               in_fifo_out_pop<=1'b1;
               bpsm_state <= `STATE_CLEANUP;
@@ -527,7 +490,7 @@ module top #(
 
 
 
-
+/*
 
         //TODO:
         //prescale to 0xff and capture to nearest 0xff
@@ -555,7 +518,7 @@ module top #(
           `reg_la_active<=1'b0;
         end
 
-
+*/
 
 
 
@@ -613,79 +576,14 @@ module top #(
 
 `ifdef SIMULATION
     initial begin
-      //peripheral_busy<=1'b0;
       reset<=1'b0;
-      count<=3'b000;
       reset_count<=3'b000;
       bp_busy <= 1'b0;
       la_start<=1'b0;
-      rreg[6'b00000] <= 16'b0000000000000000;				// test values
-      rreg[6'b00001] <= 16'b0000000000000000;
-      rreg[6'b00010] <= 16'b0000000000000000;
-      rreg[6'b00011] <= 16'b0000000000000000;
-      rreg[6'b00100] <= 16'b0000000000000000;
-      rreg[6'b00101] <= 16'b0000000000000000;
-      rreg[6'b00110] <= 16'b0000000000000000;
-      rreg[6'b00111] <= 16'b0000000000000000;
-      rreg[6'b01000] <= 16'b0000000000000000;
-      rreg[6'b01001] <= 16'b0000000000000000;
-      rreg[6'b01010] <= 16'b0000000000000000;
-      rreg[6'b01011] <= 16'b0000000000000000;
-      rreg[6'b01100] <= 16'b0000000000000000;
-      rreg[6'b01101] <= 16'b0000000000000000;
-      rreg[6'b01110] <= 16'b0000000000000000;
-      rreg[6'b01111] <= 16'b0000000000000000;
-      rreg[6'b10000] <= 16'b0000000000000000;
-      rreg[6'b10001] <= 16'b0000000000000000;
-      rreg[6'b10010] <= 16'b0000000000000000;
-      rreg[6'b10011] <= 16'b0000000000000000;
-      rreg[6'b10100] <= 16'b0000000000000000;
-      rreg[6'b10101] <= 16'b0000000000000000;
-      rreg[6'b10110] <= 16'b0000000000000000;
-      rreg[6'b10111] <= 16'b0000000000000000;
-      rreg[6'b11000] <= 16'b0000000000000000;
-      rreg[6'b11001] <= 16'b0000000000000000;
-      rreg[6'b11010] <= 16'b0000000000000000;
-      rreg[6'b11011] <= 16'b0000000000000000;
-      rreg[6'b11100] <= 16'b0000000000000000;
-      rreg[6'b11101] <= 16'b0000000000000000;
-      rreg[6'b11110] <= 16'b0000000000000000;
-      rreg[6'b11111] <= 16'b0000000000000000;
 
-      wreg[6'b00000] <= 16'b0000000000000000;				// test values
-      wreg[6'b00001] <= 16'b0000000000000000;
-      wreg[6'b00010] <= 16'b0000000000000000;
-      wreg[6'b00011] <= 16'b0000000000000000;
-      wreg[6'b00100] <= 16'b0000000000000000;
-      wreg[6'b00101] <= 16'b0000000000000000;
-      wreg[6'b00110] <= 16'b0000000000000000;
-      wreg[6'b00111] <= 16'b0000000000000000;
-      wreg[6'b01000] <= 16'b0000000000000000;
-      wreg[6'b01001] <= 16'b0000000000000000;
-      wreg[6'b01010] <= 16'b0000000000000000;
-      wreg[6'b01011] <= 16'b0000000000000000;
-      wreg[6'b01100] <= 16'b0000000000000000;
-      wreg[6'b01101] <= 16'b0000000000000000;
-      wreg[6'b01110] <= 16'b0000000000000000;
-      wreg[6'b01111] <= 16'b0000000000000000;
-      wreg[6'b10000] <= 16'b0000000000000000;
-      wreg[6'b10001] <= 16'b0000000000000000;
-      wreg[6'b10010] <= 16'b0000000000000000;
-      wreg[6'b10011] <= 16'b0000000000000000;
-      wreg[6'b10100] <= 16'b0000000000000000;
-      wreg[6'b10101] <= 16'b0000000000000000;
-      wreg[6'b10110] <= 16'b0000000000000000;
-      wreg[6'b10111] <= 16'b0000000000000000;
-      wreg[6'b11000] <= 16'b0000000000000000;
-      wreg[6'b11001] <= 16'b0000000000000000;
-      wreg[6'b11010] <= 16'b0000000000000000;
-      wreg[6'b11011] <= 16'b0000000000000000;
-      wreg[6'b11100] <= 16'b0000000000000000;
-      wreg[6'b11101] <= 16'b0000000000000000;
-      wreg[6'b11110] <= 16'b0000000000000000;
-      wreg[6'b11111] <= 16'b0000000000000000;
-
-
+      //LA sample counter debugging
+      //wire [15:0] reg_la_sample_count;
+      //assign reg_la_sample_count=`reg_la_sample_count;
     end
   `endif
 

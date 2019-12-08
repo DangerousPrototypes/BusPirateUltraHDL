@@ -124,16 +124,36 @@ module buspirate_tb();
       @(negedge rst); // wait for reset
       repeat(10) @(posedge clk);
       //IO pins setup
-      `WRITE(6'h00,16'h00FB);//od|oe
-      `WRITE(6'h01,16'h0004);//hl|dir
+      `WRITE(6'h01,8'h0B);//CMD_REGISTER_SET_POINTER
+      `WRITE(6'h00,16'h0000);
+      `WRITE(6'h01,8'h0C);//CMD_REGISTER_WRITE
+      `WRITE(6'h00,16'h00FF);//oe
+      `WRITE(6'h00,16'h0000);//od
+      `WRITE(6'h00,16'h0000);//hw config
+      `WRITE(6'h00,16'h0000); //`WRITE(6'h00,16'b10001000);//pause BPSM (la config)
+      `WRITE(6'h00,16'h0000); //la sample counter
+      `WRITE(6'h00,16'h0000);
+      `WRITE(6'h00,16'h0000);
+      `WRITE(6'h00,16'h0000);
+      `WRITE(6'h00,16'h0000);
+      `WRITE(6'h00,16'h0000);
+      `WRITE(6'h00,16'h0001); //ADC calibrate
+      `WRITE(6'h00,16'h0000);
+      `WRITE(6'h00,16'h0000); //REG_PERIPHERAL_0
+      `WRITE(6'h00,16'h0000); //REG_PERIPHERAL_1
+      `WRITE(6'h00,16'h0000); //REG_PERIPHERAL_2
+      `WRITE(6'h00,16'h0000); //REG_PERIPHERAL_3
       bpio_test_input<=5'b11111;
-      `WRITE(6'h03,16'b10001000);//pause BPSM
-      `WRITE(6'h07,16'hFE00);//start logic analyzer
-      `WRITE(6'h07,16'h81FF);//IO pins high
-      `WRITE(6'h07,16'h8100); //IO pins low
-      `WRITE(6'h07,16'h8600); //ADC measurement!!!!
-      `WRITE(6'h07,16'h8500); //ADC measurement!!!!
-      `WRITE(6'h07,16'h08aa); //write SPI data
+      `WRITE(6'h01,8'h02); //CMD_DIO_TRIS
+      `WRITE(6'h00,16'h0000); //all output
+      `WRITE(6'h01,8'h00); //CMD_DIO_WRITE
+      //`WRITE(6'h07,16'hFE00);//start logic analyzer
+      `WRITE(6'h00,16'h00FF);//IO pins high
+      `WRITE(6'h00,16'h0000); //IO pins low
+      `WRITE(6'h00,16'h00FF);//IO pins high
+      `WRITE(6'h01,8'h08); //ADC measurement
+      `WRITE(6'h00,16'h0001); //MUX 0001
+      /*`WRITE(6'h07,16'h08aa); //write SPI data
       `WRITE(6'h07,16'h08ff);
       //`WRITE(6'h07,16'hFD00);//halt command
       `WRITE(6'h07,16'h0800);
@@ -141,6 +161,7 @@ module buspirate_tb();
       `WRITE(6'h07,16'h81FF); //IO pins high
       `WRITE(6'h07,16'hFF00); //stop logic analyzer
       `WRITE(6'h03,16'b00000000);//trigger BP SM
+      */
       /*repeat(30)@(posedge clk);
       bp_fifo_clear<=1;
       repeat(4)@(posedge clk);
