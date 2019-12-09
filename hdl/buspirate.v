@@ -238,10 +238,11 @@ module top #(
     `define STATE_PERIPHERAL_WAIT 3
     `define STATE_POP_FIFO 4
     `define STATE_CLEANUP 5
-    `define STATE_HALT 6
-    `define STATE_ADC_WAIT 7
+    `define STATE_ADC_WAIT 6
+    `define STATE_DAC_WAIT 7
     `define STATE_LA_READ_STATUS 8
     `define STATE_READ_REGISTER 9
+    `define STATE_HALT 10 //should always be the highest numbered state...
 
     `define CMD_DIO_WRITE 8'h00
     `define CMD_DIO_READ 8'h01
@@ -263,6 +264,8 @@ module top #(
     `define CMD_REGISTER_SET_POINTER 8'h0B
     `define CMD_REGISTER_WRITE 8'h0C
     `define CMD_REGISTER_READ 8'h0D
+
+    `define CMD_DAC_WRITE 8'h0E
 
     `define CMD_SM_HALT 8'h0F
 
@@ -347,6 +350,21 @@ module top #(
 
                     if(in_fifo_out_data[16]===1'b1) begin //D/C bit high = command
                       bpsm_command <= in_fifo_out_data[$clog2(`CMD_SM_HALT):0];
+                      // commands that don't have data
+                      case(in_fifo_out_data[$clog2(`CMD_SM_HALT):0])
+                      `CMD_DIO_READ:
+                         begin
+                         out_fifo_in_data_d<=bpio_di;//this may need a delay!!!
+                         out_fifo_in_shift<=1'b1;
+                         end
+                        `CMD_LA_START:
+                           la_start<=1'b1;
+                        `CMD_LA_STOP:
+                           la_start<=1'b0;
+                        `CMD_SM_HALT:
+                          bpsm_state <= `STATE_HALT;
+                      endcase
+
                       //return the command so we can track progress from MCU
                       out_fifo_in_data_d<=in_fifo_out_data;
                       out_fifo_in_shift<=1'b1;
@@ -361,11 +379,6 @@ module top #(
                        `CMD_DIO_WRITE: begin//todo:change to set/clear/write...
                         bpio_dio_port_d<= in_fifo_out_data[BP_PINS-1:0];
                        end
-                       `CMD_DIO_READ:
-                          begin
-                          out_fifo_in_data_d<=bpio_di;//this may need a delay!!!
-                          out_fifo_in_shift<=1'b1;
-                          end
                        `CMD_DIO_TRIS:
                            bpio_dio_tris_d <= in_fifo_out_data[BP_PINS-1:0];
                        `CMD_PERIPHERAL_WRITE: begin
@@ -390,12 +403,11 @@ module top #(
                           adc_trigger <= 1'b1;
                           bpsm_state<=`STATE_ADC_WAIT;
                           end
-                        `CMD_LA_START:
-                           la_start<=1'b1;
-                        `CMD_LA_STOP:
-                           la_start<=1'b0;
-                        `CMD_SM_HALT:
-                          bpsm_state <= `STATE_HALT;
+                        `CMD_DAC_WRITE: begin
+                          dac_data<=in_fifo_out_data;
+                          dac_trigger <= 1'b1;
+                          bpsm_state<=`STATE_DAC_WAIT;
+                          end
                         `CMD_REGISTER_SET_POINTER:
                           reg_index <= in_fifo_out_data[3:0];
                         `CMD_REGISTER_WRITE: begin
@@ -448,6 +460,13 @@ module top #(
                 end
             end
 
+            `STATE_DAC_WAIT: begin
+                out_fifo_in_shift<=1'b0;
+                //dac_trigger <= 1'b0;
+                //if (!dac_trigger && !dac_busy && !out_fifo_in_full) begin
+                    bpsm_state <= `STATE_POP_FIFO;
+                //end
+            end
            `STATE_READ_REGISTER: begin
               if(out_fifo_in_shift===1'b1) begin
                 out_fifo_in_shift<=1'b0;
