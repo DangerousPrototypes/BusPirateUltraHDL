@@ -16,7 +16,6 @@ module dac (
 // sync signals
 	go,					// starts a SPI transmission
 	state,				// state of module (0=idle, 1=busy/transmitting)
-	calibrate,
 // data in/out
 	data_i,				// data in (will get transmitted)
 // spi signals
@@ -48,10 +47,9 @@ always @ (posedge clkin or posedge rst)
 
 if(rst)
 	begin
-		data_i <= 16'h00;
 		sclk <= 1'b0;
 		state <= 1'b0;
-		cs <= 1'b1;
+		sync <= 1'b1;
 	end
 else
 	begin
@@ -66,7 +64,7 @@ else
 				end
 			else //go === 1'b0
 				begin	//idle everything
-					cs <= 1'b1;			// cs line
+					sync <= 1'b1;			// cs line
 				end
 			end
 

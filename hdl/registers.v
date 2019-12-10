@@ -1,6 +1,25 @@
 `ifndef __REGISTERS__
 `define __REGISTERS__
 
+
+`define CMD_DIO_WRITE 8'h00
+`define CMD_DIO_READ 8'h01
+`define CMD_DIO_TRIS 8'h02
+`define CMD_PERIPHERAL_WRITE 8'h03
+`define CMD_PERIPHERAL_READ 8'h04
+`define CMD_DELAY 8'h05
+`define CMD_PWM_ON_PERIOD 8'h06
+`define CMD_PWM_OFF_PERIOD 8'h07
+`define CMD_ADC_READ 8'h08
+`define CMD_LA_START 8'h09
+`define CMD_LA_STOP 8'h0A
+`define CMD_REGISTER_SET_POINTER 8'h0B
+`define CMD_REGISTER_WRITE 8'h0C
+`define CMD_REGISTER_READ 8'h0D
+`define CMD_DAC_WRITE 8'h0E
+`define CMD_SM_HALT 8'h0F
+
+
 `define REG_BPIO_OE config_register[4'h0][BP_PINS-1:0]
 
 `define REG_BPIO_OD config_register[4'h1][BP_PINS-1:0]

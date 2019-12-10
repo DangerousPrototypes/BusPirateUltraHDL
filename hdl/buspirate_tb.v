@@ -1,9 +1,11 @@
+`include "registers.v"
 `timescale 1ns/1ps
 `define DUMPSTR(x) `"x.vcd`"
 
 `define WRITE(address,data) mc_add <= address;mc_data_reg <= data;repeat(3)@(posedge clk);mc_we=0;repeat(6)@(posedge clk);mc_we=1;repeat(3)@(posedge clk)
 `define READ(address,data) mc_add <= address;mc_data_reg <= data;repeat(3)@(posedge clk);mc_oe=0;repeat(6)@(posedge clk);mc_oe=1;repeat(3)@(posedge clk)
-
+`define WC(command) mc_add <= 6'h01;mc_data_reg <= command;repeat(3)@(posedge clk);mc_we=0;repeat(6)@(posedge clk);mc_we=1;repeat(3)@(posedge clk)
+`define WD(data) mc_add <= 6'h00;mc_data_reg <= data;repeat(3)@(posedge clk);mc_we=0;repeat(6)@(posedge clk);mc_we=1;repeat(3)@(posedge clk)
 module buspirate_tb();
 
   parameter DURATION = 10;
@@ -124,35 +126,54 @@ module buspirate_tb();
       @(negedge rst); // wait for reset
       repeat(10) @(posedge clk);
       //IO pins setup
-      `WRITE(6'h01,8'h0B);//CMD_REGISTER_SET_POINTER
-      `WRITE(6'h00,16'h0000);
-      `WRITE(6'h01,8'h0C);//CMD_REGISTER_WRITE
-      `WRITE(6'h00,16'h00FF);//oe
-      `WRITE(6'h00,16'h0000);//od
-      `WRITE(6'h00,16'h0000);//hw config
-      `WRITE(6'h00,16'h0000); //`WRITE(6'h00,16'b10001000);//pause BPSM (la config)
-      `WRITE(6'h00,16'h0000); //la sample counter
-      `WRITE(6'h00,16'h0000);
-      `WRITE(6'h00,16'h0000);
-      `WRITE(6'h00,16'h0000);
-      `WRITE(6'h00,16'h0000);
-      `WRITE(6'h00,16'h0000);
-      `WRITE(6'h00,16'h0001); //ADC calibrate
-      `WRITE(6'h00,16'h0000);
-      `WRITE(6'h00,16'h0000); //REG_PERIPHERAL_0
-      `WRITE(6'h00,16'h0000); //REG_PERIPHERAL_1
-      `WRITE(6'h00,16'h0000); //REG_PERIPHERAL_2
-      `WRITE(6'h00,16'h0000); //REG_PERIPHERAL_3
+      `WC(`CMD_REGISTER_SET_POINTER);//CMD_REGISTER_SET_POINTER
+      `WD(16'h0000);
+      `WC(`CMD_REGISTER_WRITE);//CMD_REGISTER_WRITE
+      `WD(16'h00FF);//oe
+      `WD(16'h0000);//od
+      `WD(16'h0000);//hw config
+      `WD(16'h0000); //`WD(16'b10001000);//pause BPSM (la config)
+      `WD(16'h0000); //la sample counter
+      `WD(16'h0000);
+      `WD(16'h0000);
+      `WD(16'h0000);
+      `WD(16'h0000);
+      `WD(16'h0000);
+      `WD(16'h0000); //ADC calibrate
+      `WD(16'h0000);
+      `WD(16'h0000); //REG_PERIPHERAL_0
+      `WD(16'h0000); //REG_PERIPHERAL_1
+      `WD(16'h0000); //REG_PERIPHERAL_2
+      `WD(16'h0000); //REG_PERIPHERAL_3
+      `WC(`CMD_REGISTER_SET_POINTER);//CMD_REGISTER_SET_POINTER
+      `WD(16'h0000);
+      `WC(`CMD_REGISTER_READ);
+      `WD(16'h0005); //five words
       bpio_test_input<=5'b11111;
-      `WRITE(6'h01,8'h02); //CMD_DIO_TRIS
-      `WRITE(6'h00,16'h0000); //all output
-      `WRITE(6'h01,8'h00); //CMD_DIO_WRITE
-      //`WRITE(6'h07,16'hFE00);//start logic analyzer
-      `WRITE(6'h00,16'h00FF);//IO pins high
-      `WRITE(6'h00,16'h0000); //IO pins low
-      `WRITE(6'h00,16'h00FF);//IO pins high
-      `WRITE(6'h01,8'h08); //ADC measurement
-      `WRITE(6'h00,16'h0001); //MUX 0001
+      `WC(`CMD_DIO_TRIS); //CMD_DIO_TRIS
+      `WD(16'h00FF); //all input
+      `WC(`CMD_DIO_READ);
+      bpio_test_input<=5'b00000;
+      `WC(`CMD_DIO_READ);
+      `WC(`CMD_DIO_TRIS); //CMD_DIO_TRIS
+      `WD(16'h0000); //all output
+      `WC(`CMD_DIO_WRITE); //CMD_DIO_WRITE
+      `WD(16'h00FF);//IO pins high
+      `WD(16'h0000); //IO pins low
+      `WD(16'h00FF);//IO pins high
+      `WC(`CMD_PERIPHERAL_WRITE);
+      `WD(16'hFFAA);
+      `WC(`CMD_DELAY);
+      `WD(16'h0010);
+      `WC(`CMD_PWM_ON_PERIOD); //PWM ON
+      `WD(16'h000F);
+      `WC(`CMD_PWM_OFF_PERIOD); //PWM OFF
+      `WD(16'h000F);
+      `WC(`CMD_ADC_READ); //ADC measurement
+      `WD(16'h0001); //MUX 0001
+
+
+
       /*`WRITE(6'h07,16'h08aa); //write SPI data
       `WRITE(6'h07,16'h08ff);
       //`WRITE(6'h07,16'hFD00);//halt command
@@ -167,7 +188,7 @@ module buspirate_tb();
       repeat(4)@(posedge clk);
       bp_fifo_clear<=0;*/
       repeat(100)@(posedge clk);
-      `WRITE(6'h03,16'b00000000);//trigger BP SM
+      //`WRITE(6'h03,16'b00000000);//trigger BP SM
       repeat(200)@(posedge clk);
       $finish;
     end
