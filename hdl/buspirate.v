@@ -47,7 +47,8 @@ module top #(
   output [3:0] adc_mux_s,
   output adc_cs, adc_clock,
   input adc_data,
-  output pullup_enable
+  output pullup_enable,
+  input mcu_aux5
   );
     //pll PLL_2F(clock,pll_clk,locked);
 
@@ -56,10 +57,10 @@ module top #(
     reg [3:0] reg_count, reg_index;
 
     //wires tied to the memory controller WE and OE signals
-    wire mc_we_sync,mc_oe_sync,mc_ce_sync;
+    wire mc_we_sync,mc_oe_sync,mc_ce_sync, bpsm_halt_resume_sync;
     sync MC_WE_SYNC(clock, mc_we, mc_we_sync);
     sync MC_OE_SYNC(clock, mc_oe, mc_oe_sync);
-    sync MC_CE_SYNC(clock, mc_ce, mc_ce_sync);
+    sync BPSM_HALT_RESUME_SYNC(clock, mcu_aux5, bpsm_halt_resume_sync);
 
     // Tristate pin handling
     // Bus Pirate IO pins
@@ -263,6 +264,7 @@ module top #(
 
     reg [$clog2(`STATE_HALT):0] bpsm_state; //,bpsm_next_state, bpsm_next_next_state;
     reg [$clog2(`CMD_SM_HALT):0] bpsm_command;
+    reg bpsm_halt;
 
     always @(posedge clock)
       begin
@@ -270,38 +272,32 @@ module top #(
       if(reset_count<3) begin
         reset_count<=reset_count+1;
         reset<=1'b1;
-      end
-      else
-      begin
+        end
+      else begin
         reset<=1'b0;
       end
 
-      if(`reg_bpsm_reset||reset) begin
+      if(reset) begin
            bpsm_state <= `STATE_IDLE;
            peripheral_trigger <= 1'b0;
            out_fifo_in_shift<=1'b0;
            in_fifo_out_pop<=1'b0;
            adc_mux_en_d<=1'b1;
-       end
-       else
-       begin
+         end
+       else begin
 
-           in_fifo_in_shift<=1'b0;
-           out_fifo_out_pop<=1'b0;
-           if(!mc_ce)
-           begin
+         in_fifo_in_shift<=1'b0;
+         out_fifo_out_pop<=1'b0;
+         if (mc_we_sync && !mc_ce) begin			// write
+           case(mc_add)
+             6'h00:in_fifo_in_shift<=1'b1;
+             6'h01:in_fifo_in_shift<=1'b1;
+             //6'h02:sram_auto_clock_delay<=1'b1;
+             6'h02:sram_auto_clock<=1'b1;
+           endcase
+           end
 
-             if (mc_we_sync)			// write
-             begin
-               case(mc_add)
-                 6'h00:in_fifo_in_shift<=1'b1;
-                 6'h01:in_fifo_in_shift<=1'b1;
-                 6'h02:sram_auto_clock_delay<=1'b1;
-               endcase
-             end
-
-             else if (mc_oe_sync)		// read
-             begin
+           else if (mc_oe_sync && !mc_ce)	begin	// read
                case(mc_add)
                  6'h00: begin
                    mc_dout_d<=out_fifo_out_data;//remember if there is data in FIFO the first byte is already available
@@ -312,32 +308,26 @@ module top #(
                    out_fifo_out_pop<=1'b1;//pop when done with this word
                  end
                  6'h02:begin
-                   sram_auto_clock_delay<=1'b1; //is this really stable? don't we need delay betwee the clock and the reading of the results?
-                   mc_dout_d <= {8'h00,sram_sio_tdi}; //should move to if clock=1 in a clock delay?
+                   sram_auto_clock<=1'b1;
                  end
                  6'h03:mc_dout_d[$clog2(`STATE_HALT):0]<=bpsm_state;
                endcase
-             end
-           end// if we or oe
-         end //if ce
+               end
 
-         //this can be done with assign sram_auto_clock=we_last/mc_oe_sync && !current?
-         /*if(sram_auto_clock_delay)
-         begin
-           sram_auto_clock_delay<=1'b0;
-           sram_auto_clock<=1'b1;
-         end
-         else if(sram_auto_clock)
-         begin
-           sram_auto_clock<=1'b0;
-         end*/
+           else begin
+             if(sram_auto_clock) begin
+               sram_auto_clock<=1'b0;
+               mc_dout_d <= {8'h00,sram_sio_tdi}; //should check to be sure we want this? only reads?
+               end
+            end
+
 
          //main bus pirate state machine
          case(bpsm_state)
 
              `STATE_IDLE: begin
 
-                 if(in_fifo_out_nempty&&!out_fifo_in_full) begin //check out_fifo not full because we slam the command back into the queue
+                 if(in_fifo_out_nempty && !out_fifo_in_full) begin //check out_fifo not full because we slam the command back into the queue
                     bp_busy <= 1'b1;
 
                     if(in_fifo_out_data[16]===1'b1) begin //D/C bit high = command
@@ -350,12 +340,6 @@ module top #(
 
                       // commands that don't have data
                       case(in_fifo_out_data[$clog2(`CMD_SM_HALT):0])
-                      `CMD_DIO_READ:
-                         begin
-                         out_fifo_in_data_d<=bpio_di;//this may need a delay!!!
-                         out_fifo_in_shift<=1'b1;
-                         //bpsm_state <= `STATE_READ_IO;
-                         end
                         `CMD_LA_START:
                            la_start<=1'b1;
                         `CMD_LA_STOP:
@@ -369,12 +353,16 @@ module top #(
 
                     else begin //begin else data
 
-                    bpsm_state<=`STATE_POP_FIFO; //default pop, otherwise handed to the next state forced below...
+                     bpsm_state<=`STATE_POP_FIFO; //default pop, otherwise handed to the next state forced below...
 
                      case(bpsm_command)
                        `CMD_DIO_WRITE: begin//todo:change to set/clear/write...
-                        bpio_dio_port_d<= in_fifo_out_data[BP_PINS-1:0];
-                       end
+                         bpio_dio_port_d<= in_fifo_out_data[BP_PINS-1:0];
+                         end
+                       `CMD_DIO_READ: begin
+                          out_fifo_in_data_d<=bpio_di;
+                          out_fifo_in_shift<=1'b1;
+                          end
                        `CMD_DIO_TRIS:
                            bpio_dio_tris_d <= in_fifo_out_data[BP_PINS-1:0];
                        `CMD_PERIPHERAL_WRITE: begin
@@ -466,14 +454,14 @@ module top #(
            `STATE_READ_REGISTER: begin
               if(out_fifo_in_shift===1'b1) begin
                 out_fifo_in_shift<=1'b0;
-                reg_index<=reg_index+1;
-                reg_count<=reg_count-1;
                 if(reg_count===0)
-                   bpsm_state <= `STATE_IDLE;
+                   bpsm_state <= `STATE_POP_FIFO;
               end
               else if (!out_fifo_in_full) begin
                   out_fifo_in_data_d<=config_register[reg_index];
                   out_fifo_in_shift<=1'b1;
+                  reg_index<=reg_index+1;
+                  reg_count<=reg_count-1;
               end
             end
 
@@ -495,13 +483,17 @@ module top #(
               end
 
             `STATE_HALT: begin
-              `reg_bpsm_reset<=1'b1; //self reset
+              bpsm_halt<=1'b1; //self reset
               out_fifo_in_shift<=1'b0;
-              in_fifo_out_pop<=1'b1;
+              if(bpsm_halt_resume_sync===1'b1)
+                bpsm_state <= `STATE_POP_FIFO;
              end
 
           endcase //bpsm_state
-        end //if reset else bpsm_state
+
+        end //if !reset
+
+      end //end always begin?????
 
 
 

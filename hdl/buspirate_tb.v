@@ -44,7 +44,7 @@ module buspirate_tb();
   wire adc_cs, adc_clock;
   reg adc_data;
   wire pullup_enable;
-
+  reg bpsm_halt_resume_d;
 
 
   assign mc_data=(mc_oe)?mc_data_reg:16'hzzzz;
@@ -89,8 +89,8 @@ module buspirate_tb();
     .adc_cs(adc_cs),
     .adc_clock(adc_clock),
     .adc_data(adc_data),
-    .pullup_enable(pullup_enable)
-
+    .pullup_enable(pullup_enable),
+    .mcu_aux5(bpsm_halt_resume_d)
 
     );
 
@@ -123,8 +123,11 @@ module buspirate_tb();
       mc_ce<=0;
       bp_fifo_clear<=0;
       adc_data<=1'b1;
+      bpsm_halt_resume_d<=1'b0;
       @(negedge rst); // wait for reset
       repeat(10) @(posedge clk);
+      //test halt
+      `WC(`CMD_SM_HALT);
       //IO pins setup
       `WC(`CMD_REGISTER_SET_POINTER);//CMD_REGISTER_SET_POINTER
       `WD(16'h0000);
@@ -145,16 +148,24 @@ module buspirate_tb();
       `WD(16'h0000); //REG_PERIPHERAL_1
       `WD(16'h0000); //REG_PERIPHERAL_2
       `WD(16'h0000); //REG_PERIPHERAL_3
+      bpsm_halt_resume_d<=1'b1;
+      repeat(5)@(posedge clk);
+      bpsm_halt_resume_d<=1'b0;
       `WC(`CMD_REGISTER_SET_POINTER);//CMD_REGISTER_SET_POINTER
       `WD(16'h0000);
       `WC(`CMD_REGISTER_READ);
       `WD(16'h0005); //five words
+      `WC(`CMD_REGISTER_SET_POINTER);//CMD_REGISTER_SET_POINTER
+      `WD(16'h0002); //pullups configuration
+      `WC(`CMD_REGISTER_WRITE);//CMD_REGISTER_WRITE
+      `WD(16'h0001);//enable pullups
       bpio_test_input<=5'b11111;
       `WC(`CMD_DIO_TRIS); //CMD_DIO_TRIS
       `WD(16'h00FF); //all input
       `WC(`CMD_DIO_READ);
+      `WD(16'h0000);
       bpio_test_input<=5'b00000;
-      `WC(`CMD_DIO_READ);
+      `WD(16'h0000);
       `WC(`CMD_DIO_TRIS); //CMD_DIO_TRIS
       `WD(16'h0000); //all output
       `WC(`CMD_DIO_WRITE); //CMD_DIO_WRITE

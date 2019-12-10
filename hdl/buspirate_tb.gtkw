@@ -1,15 +1,15 @@
 [*]
 [*] GTKWave Analyzer v3.3.77 (w)1999-2016 BSI
-[*] Tue Dec 10 10:39:50 2019
+[*] Tue Dec 10 15:42:11 2019
 [*]
 [dumpfile] "C:\repos\BusPirateUltraHDL\hdl\buspirate_tb.vcd"
-[dumpfile_mtime] "Tue Dec 10 10:19:04 2019"
-[dumpfile_size] 89703
+[dumpfile_mtime] "Tue Dec 10 15:38:23 2019"
+[dumpfile_size] 96031
 [savefile] "C:\repos\BusPirateUltraHDL\hdl\buspirate_tb.gtkw"
-[timestart] 4539000
+[timestart] 0
 [size] 1920 1017
 [pos] -1 -1
-*-17.848240 5474000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+*-21.330481 397700 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] buspirate_tb.
 [treeopen] buspirate_tb.buspirate.
 [sst_width] 211
@@ -17,34 +17,31 @@
 [sst_expanded] 1
 [sst_vpaned_height] 478
 @200
--IO7
+-IO PINS
 @28
-buspirate_tb.buspirate.BPIO_BUF[7].bufdat_tristate_din
-buspirate_tb.buspirate.BPIO_BUF[7].bufdat_tristate_dout
-buspirate_tb.buspirate.BPIO_BUF[7].bufdat_tristate_oe
-buspirate_tb.buspirate.BPIO_BUF[7].bufdir
-buspirate_tb.buspirate.BPIO_BUF[7].bufod
-buspirate_tb.buspirate.BPIO_BUF[7].din
-buspirate_tb.buspirate.BPIO_BUF[7].dir
-buspirate_tb.buspirate.BPIO_BUF[7].dout
-buspirate_tb.buspirate.BPIO_BUF[7].od
-buspirate_tb.buspirate.BPIO_BUF[7].oe
+buspirate_tb.BP_BUF[0].iopin_state
+buspirate_tb.BP_BUF[1].iopin_state
+buspirate_tb.BP_BUF[2].iopin_state
+buspirate_tb.BP_BUF[3].iopin_state
+buspirate_tb.BP_BUF[4].iopin_state
+buspirate_tb.BP_BUF[5].iopin_state
+buspirate_tb.BP_BUF[6].iopin_state
+buspirate_tb.BP_BUF[7].iopin_state
 @200
 -PWM
 @28
 buspirate_tb.buspirate.PWM_OUT.clkout
 @200
 -BPSM
+@29
+buspirate_tb.buspirate.bpsm_halt_resume_sync
 @22
 buspirate_tb.buspirate.FIFO_IN.out_data[16:0]
 buspirate_tb.buspirate.bpsm_state[4:0]
-@29
+@28
 buspirate_tb.buspirate.FIFO_OUT.in_shift
 @22
 buspirate_tb.buspirate.FIFO_OUT.in_data[15:0]
-buspirate_tb.buspirate.bpio_dio_port_d[7:0]
-buspirate_tb.buspirate.bpio_dio_tris_d[7:0]
-buspirate_tb.buspirate.bpio_buffer_dir[7:0]
 @200
 -ADC
 @28
@@ -65,5 +62,14 @@ buspirate_tb.buspirate.SPI_MASTER.sclk
 -DELAY
 @22
 buspirate_tb.buspirate.delay_counter[15:0]
+@200
+-REG READ
+@22
+buspirate_tb.buspirate.reg_index[3:0]
+buspirate_tb.buspirate.reg_count[3:0]
+@200
+-PULLUPS
+@28
+buspirate_tb.buspirate.pullup_enable
 [pattern_trace] 1
 [pattern_trace] 0
