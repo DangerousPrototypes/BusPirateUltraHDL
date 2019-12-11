@@ -12,12 +12,12 @@ module spimaster (
 // general control
 	rst,				// resets module to known state
 	clkin,				// clock that makes everyhting tick
+	clk_divider,
 // spi configuration
 	cpol,				// clock polarity
 	cpha,				// clock phase
-	cspol,				// CS polarity
+	//cspol,				// CS polarity
 	//autocs,				// assert CS automatically
-
 // sync signals
 	go,					// starts a SPI transmission
 	state,				// state of module (0=idle, 1=busy/transmitting)
@@ -34,10 +34,10 @@ module spimaster (
 //
 input rst;
 input clkin;
+input [15:0] clk_divider;
 input cpol;
 input cpha;
-input cspol;
-input clk_divider;
+//input cspol;
 //input autocs;
 input go;
 output reg state;
@@ -51,6 +51,7 @@ output reg sclk;
 // internal vars
 reg [4:0] bitcount;		// number of bits to transmit
 reg clockphase;			// where are we in our clockcycle (0= 1st half, 1= 2nd half)
+reg [15:0] delay;
 
 always @ (posedge clkin or posedge rst)
 
@@ -66,10 +67,12 @@ if(rst) begin
 else begin
 
 	if(state === 1'b0) begin // only accept go when we are idle
+
 		if(go === 1'b1)	begin
 			bitcount <= data_i[11:8]; //adjust the number of bits to send
 			state <= 1'b1;
 			clockphase <= 1'b0;
+			delay<=clk_divider;
 			end
 		else begin	// put lines into their idle state
 			sclk <= cpol;						// clock line
@@ -79,40 +82,46 @@ else begin
 
 	else begin //if(state === 1'b1)						// transmit the bits and receive them
 
-		if(bitcount === 5'b00000) begin
-			state<=1'b0;
+		if(delay!==0) begin
+			delay<=delay-1;
 			end
-		else if (clockphase === 1'b0)	begin
-
-			if (cpha === 1'b0) begin
-				mosi <= data_i[bitcount-1];
+		else begin
+			delay<=clk_divider;
+			if(bitcount === 5'b00000) begin
+				state<=1'b0;
 				end
-			else begin
-				data_o[bitcount] <= miso;
-				end
+			else if (clockphase === 1'b0)	begin
 
-			sclk <= cpol;
-			clockphase <= 1'b1;
-			end
+				if (cpha === 1'b0) begin
+					mosi <= data_i[bitcount-1];
+					end
+				else begin
+					data_o[bitcount] <= miso;
+					end
 
-		else begin //clock phase === 1'b1
-			if (cpha === 1'b0) begin
-				data_o[bitcount-1] <= miso;
-				end
-			else begin
-				mosi <= data_i[bitcount-1];
+				sclk <= cpol;
+				clockphase <= 1'b1;
 				end
 
-			sclk <= ~cpol;
-			bitcount <= bitcount - 1;
-			clockphase <= 1'b0;
-			end //end bitcount and clock phase
+			else begin //clock phase === 1'b1
+				if (cpha === 1'b0) begin
+					data_o[bitcount-1] <= miso;
+					end
+				else begin
+					mosi <= data_i[bitcount-1];
+					end
 
-		if(bitcount === 0) begin
-			state <= 1'b0;
-			mosi <= data_i[0];
-			end
-		//if (autocs) cs <= ~cspol;
+				sclk <= ~cpol;
+				bitcount <= bitcount - 1;
+				clockphase <= 1'b0;
+				end //end bitcount and clock phase
+
+			if(bitcount === 0) begin
+				state <= 1'b0;
+				mosi <= data_i[0];
+				end
+				//if (autocs) cs <= ~cspol;
+			end // end if delay
 	end //end state === 1
 end //end reset === 0
 endmodule

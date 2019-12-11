@@ -45,6 +45,8 @@
 `define REG_ADC_CLOCK_DIVIDER config_register[4'hA][2:0]
 
 `define REG_PERIPHERAL_0 config_register[4'hC]
+//`REG_PERIPHERAL_0[0] .cpol(1'b1), //cpol,				// clock polarity
+//`REG_PERIPHERAL_0[1] .cpha(1'b0), //cpha,				// clock phase
 `define REG_PERIPHERAL_1 config_register[4'hD]
 `define REG_PERIPHERAL_2 config_register[4'hE]
 `define REG_PERIPHERAL_3 config_register[4'hF]

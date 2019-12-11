@@ -113,14 +113,15 @@ module top #(
     // PULLUP RESISTORS
     assign pullup_enable=`REG_HW_CONFIG_PULLUPS_EN; //pullups disable
 
-    //1111 0100 0010 0100 0000 0000
+    //1111 0100 0010 0100 0000 0000 = 24'hF42400
+    reg [23:0] la_sample_counter;
     wire [LA_WIDTH-1:0] sram_sio_tdi;
     wire [LA_WIDTH-1:0] sram_sio_tdo;
 
     reg [7:0] sram_out_d;
     reg la_start;
     wire sram_clock_source;
-    reg sram_auto_clock, sram_auto_clock_delay;
+    reg sram_auto_clock;
     assign sram_clock_source=(la_start&&`reg_la_active)?clock:(`reg_la_io_quad)?sram_auto_clock:(`reg_la_io_spi)?mcu_clock:1'b0;
     assign sram_clock={sram_clock_source,sram_clock_source};
     assign sram_cs=(la_start&&`reg_la_active)?2'b00:{`reg_la_io_cs1,`reg_la_io_cs0}; //TODO: hold CS low during active?
@@ -227,10 +228,11 @@ module top #(
      // general control
        .rst(reset),				// resets module to known state
        .clkin(clock),				// clock that makes everyhting tick
+       .clk_divider(`REG_PERIPHERAL_1),
      // spi configuration
-       .cpol(1'b1), //cpol,				// clock polarity
-       .cpha(1'b0), //cpha,				// clock phase
-       .cspol(1'b1), //cspol,				// CS polarity
+       .cpol(`REG_PERIPHERAL_0[0]), //cpol,				// clock polarity
+       .cpha(`REG_PERIPHERAL_0[1]), //cpha,				// clock phase
+       //.cspol(1'b1), //cspol,				// CS polarity
        //.autocs(1'b0), //autocs,				// assert CS automatically
      // sync signals
        .go(peripheral_trigger),					// starts a SPI transmission

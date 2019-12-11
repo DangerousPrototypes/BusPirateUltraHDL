@@ -144,8 +144,8 @@ module buspirate_tb();
       `WD(16'h0000);
       `WD(16'h0003); //ADC calibrate|2:0 adc clock divider
       `WD(16'h0000);
-      `WD(16'h0000); //REG_PERIPHERAL_0
-      `WD(16'h0000); //REG_PERIPHERAL_1
+      `WD(16'h0001); //REG_PERIPHERAL_0
+      `WD(16'h0003); //REG_PERIPHERAL_1
       `WD(16'h0000); //REG_PERIPHERAL_2
       `WD(16'h0000); //REG_PERIPHERAL_3
       bpsm_halt_resume_d<=1'b1;

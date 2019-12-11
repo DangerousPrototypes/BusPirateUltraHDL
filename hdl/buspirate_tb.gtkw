@@ -1,10 +1,10 @@
 [*]
 [*] GTKWave Analyzer v3.3.77 (w)1999-2016 BSI
-[*] Wed Dec 11 09:33:36 2019
+[*] Wed Dec 11 10:47:16 2019
 [*]
 [dumpfile] "C:\repos\BusPirateUltraHDL\hdl\buspirate_tb.vcd"
-[dumpfile_mtime] "Wed Dec 11 09:32:16 2019"
-[dumpfile_size] 96218
+[dumpfile_mtime] "Wed Dec 11 10:45:41 2019"
+[dumpfile_size] 94147
 [savefile] "C:\repos\BusPirateUltraHDL\hdl\buspirate_tb.gtkw"
 [timestart] 0
 [size] 1920 1017
@@ -59,7 +59,7 @@ buspirate_tb.buspirate.PWM_OUT.clkout
 buspirate_tb.buspirate.ADC_SI.clk_divider[2:0]
 buspirate_tb.buspirate.ADC_SI.delay[2:0]
 buspirate_tb.buspirate.ADC_SI.state
-@23
+@22
 buspirate_tb.buspirate.ADC_SI.bitcount[4:0]
 @28
 buspirate_tb.buspirate.ADC_SI.sclk
@@ -75,6 +75,10 @@ buspirate_tb.buspirate.SPI_MASTER.mosi
 buspirate_tb.buspirate.SPI_MASTER.go
 buspirate_tb.buspirate.SPI_MASTER.state
 buspirate_tb.buspirate.SPI_MASTER.sclk
+@22
+buspirate_tb.buspirate.SPI_MASTER.delay[15:0]
+@29
+buspirate_tb.buspirate.SPI_MASTER.clkin
 @200
 -DELAY
 @22
