@@ -62,7 +62,7 @@ module buspirate_tb();
     .FIFO_DEPTH(FIFO_DEPTH)
     )buspirate(
     .clock(clk),
-    //.reset(rst),
+    .reset(rst),
     .bpio_buffer_io(bpio_buffer_io),
     .bpio_buffer_dir(bpio_buffer_dir),
     .bpio_buffer_od(bpio_buffer_od),
@@ -142,7 +142,7 @@ module buspirate_tb();
       `WD(16'h0000);
       `WD(16'h0000);
       `WD(16'h0000);
-      `WD(16'h0000); //ADC calibrate
+      `WD(16'h0003); //ADC calibrate|2:0 adc clock divider
       `WD(16'h0000);
       `WD(16'h0000); //REG_PERIPHERAL_0
       `WD(16'h0000); //REG_PERIPHERAL_1
@@ -173,7 +173,7 @@ module buspirate_tb();
       `WD(16'h0000); //IO pins low
       `WD(16'h00FF);//IO pins high
       `WC(`CMD_PERIPHERAL_WRITE);
-      `WD(16'hFFAA);
+      `WD(16'h08AA);
       `WC(`CMD_DELAY);
       `WD(16'h0010);
       `WC(`CMD_PWM_ON_PERIOD); //PWM ON

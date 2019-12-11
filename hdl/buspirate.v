@@ -24,7 +24,7 @@ module top #(
   parameter FIFO_DEPTH = 512
 ) (
   input clock,
-  //input reset,
+  input reset,
   inout wire [BP_PINS-1:0] bpio_buffer_io,
   output wire [BP_PINS-1:0] bpio_buffer_dir, bpio_buffer_od,
   output wire[LA_CHIPS-1:0] sram_clock,
@@ -113,11 +113,7 @@ module top #(
     // PULLUP RESISTORS
     assign pullup_enable=`REG_HW_CONFIG_PULLUPS_EN; //pullups disable
 
-    reg reset;
-    reg [2:0] reset_count;
     //1111 0100 0010 0100 0000 0000
-
-
     wire [LA_WIDTH-1:0] sram_sio_tdi;
     wire [LA_WIDTH-1:0] sram_sio_tdo;
 
@@ -155,7 +151,7 @@ module top #(
       .WIDTH(FIFO_WIDTH+1),
       .DEPTH(FIFO_DEPTH)
     ) FIFO_IN (
-      .reset(bp_fifo_clear_sync),
+      .reset(reset || bp_fifo_clear_sync),
       .in_clock(clock),
       .in_shift(in_fifo_in_shift),
       .in_data({mc_add[0],mc_din}), //bit 0 of MC address is command/data indicator
@@ -170,7 +166,7 @@ module top #(
       .WIDTH(FIFO_WIDTH),
       .DEPTH(FIFO_DEPTH)
     ) FIFO_OUT (
-      .reset(bp_fifo_clear_sync),
+      .reset(reset || bp_fifo_clear_sync),
       .in_clock(clock),
     	.in_shift(out_fifo_in_shift), //???
     	.in_data(out_fifo_in_data_d), // in data
@@ -196,6 +192,7 @@ module top #(
       // general control
       	.rst(reset),				// resets module to known state
       	.clkin(clock),				// clock that makes everyhting tick
+        .clk_divider(`REG_ADC_CLOCK_DIVIDER),
       // sync signals
       	.go(adc_trigger),					// starts a SPI transmission
       	.state(adc_busy),				// state of module (0=idle, 1=busy/transmitting)
@@ -267,22 +264,16 @@ module top #(
     reg bpsm_halt;
 
     always @(posedge clock)
-      begin
-      //some manual reset crap...need global reset pin, but this still may be needed accorting to various posts I've read
-      if(reset_count<3) begin
-        reset_count<=reset_count+1;
-        reset<=1'b1;
-        end
-      else begin
-        reset<=1'b0;
-      end
-
       if(reset) begin
            bpsm_state <= `STATE_IDLE;
            peripheral_trigger <= 1'b0;
            out_fifo_in_shift<=1'b0;
            in_fifo_out_pop<=1'b0;
            adc_mux_en_d<=1'b1;
+           `REG_BPIO_OE<=0;
+           `REG_HW_CONFIG<=0;
+           bp_busy <= 1'b0;
+           la_start<=1'b0;
          end
        else begin
 
@@ -493,10 +484,6 @@ module top #(
 
         end //if !reset
 
-      end //end always begin?????
-
-
-
 /*
 
         //TODO:
@@ -527,6 +514,7 @@ module top #(
 
 */
 
+      //end //end always begin
 
 
     //define the tristate data pin explicitly in the top module
@@ -583,11 +571,6 @@ module top #(
 
 `ifdef SIMULATION
     initial begin
-      reset<=1'b0;
-      reset_count<=3'b000;
-      bp_busy <= 1'b0;
-      la_start<=1'b0;
-
       //LA sample counter debugging
       //wire [15:0] reg_la_sample_count;
       //assign reg_la_sample_count=`reg_la_sample_count;

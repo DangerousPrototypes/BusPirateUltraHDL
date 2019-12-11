@@ -37,6 +37,7 @@ input clkin;
 input cpol;
 input cpha;
 input cspol;
+input clk_divider;
 //input autocs;
 input go;
 output reg state;
@@ -53,68 +54,66 @@ reg clockphase;			// where are we in our clockcycle (0= 1st half, 1= 2nd half)
 
 always @ (posedge clkin or posedge rst)
 
-if(rst)
-begin
+if(rst) begin
 	data_o <= 8'b0;
 	mosi <= 1'b0;
 	sclk <= 1'b0;
 	state <= 1'b0;
 	//cs <= 1'b0;
 	bitcount <=5'b00000;
-end
-else
-begin
-	if((go === 1'b1)&&(state === 1'b0))		// only accept go when we are idle
-	begin
-		bitcount <= data_i[11:8]; //adjust the number of bits to send
-		state <= 1'b1;
-		clockphase <= 1'b0;
 	end
 
-	if((go === 1'b0)&&(state === 1'b0))		// put lines into their idle state
-	begin
-		sclk <= cpol;						// clock line
-		//if (autocs) cs <= cspol;			// cs line
-	end
+else begin
 
-	if(state === 1'b1)						// transmit the bits and receive them
-	begin
-		if(bitcount==5'b00000)
+	if(state === 1'b0) begin // only accept go when we are idle
+		if(go === 1'b1)	begin
+			bitcount <= data_i[11:8]; //adjust the number of bits to send
+			state <= 1'b1;
+			clockphase <= 1'b0;
+			end
+		else begin	// put lines into their idle state
+			sclk <= cpol;						// clock line
+			//if (autocs) cs <= cspol;			// cs line
+			end
+		end
+
+	else begin //if(state === 1'b1)						// transmit the bits and receive them
+
+		if(bitcount === 5'b00000) begin
 			state<=1'b0;
-		else if (clockphase === 1'b0)
-		begin
-			if (cpha === 1'b0)
-			begin
+			end
+		else if (clockphase === 1'b0)	begin
+
+			if (cpha === 1'b0) begin
 				mosi <= data_i[bitcount-1];
-			end
-			else
-			begin
+				end
+			else begin
 				data_o[bitcount] <= miso;
-			end
+				end
+
 			sclk <= cpol;
 			clockphase <= 1'b1;
-		end
-		else
-		begin
-			if (cpha === 1'b0)
-			begin
+			end
+
+		else begin //clock phase === 1'b1
+			if (cpha === 1'b0) begin
 				data_o[bitcount-1] <= miso;
-			end
-			else
-			begin
+				end
+			else begin
 				mosi <= data_i[bitcount-1];
-			end
+				end
+
 			sclk <= ~cpol;
 			bitcount <= bitcount - 1;
 			clockphase <= 1'b0;
-		end
-		if(bitcount === 0)
-		begin
+			end //end bitcount and clock phase
+
+		if(bitcount === 0) begin
 			state <= 1'b0;
 			mosi <= data_i[0];
-		end
+			end
 		//if (autocs) cs <= ~cspol;
-	end
-end
+	end //end state === 1
+end //end reset === 0
 endmodule
 `endif

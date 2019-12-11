@@ -41,7 +41,8 @@
 
 `define reg_la_sample_count rreg[4'h4]
 
-`define REG_ADC_CALIBRATE config_register[4'hA][0]
+`define REG_ADC_CALIBRATE config_register[4'hA][3]
+`define REG_ADC_CLOCK_DIVIDER config_register[4'hA][2:0]
 
 `define REG_PERIPHERAL_0 config_register[4'hC]
 `define REG_PERIPHERAL_1 config_register[4'hD]

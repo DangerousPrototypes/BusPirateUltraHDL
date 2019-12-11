@@ -14,6 +14,7 @@ module adc (
 // general control
 	rst,				// resets module to known state
 	clkin,				// clock that makes everyhting tick
+	clk_divider,
 // sync signals
 	go,					// starts a SPI transmission
 	state,				// state of module (0=idle, 1=busy/transmitting)
@@ -29,6 +30,7 @@ module adc (
 //
 input rst;
 input clkin;
+input [2:0] clk_divider;
 
 input go;
 output reg state;
@@ -48,67 +50,55 @@ reg clockphase;			// where are we in our clockcycle (0= 1st half, 1= 2nd half)
 
 always @ (posedge clkin or posedge rst)
 
-if(rst)
-	begin
+if(rst)	begin
 		data_o <= 16'h00;
-		//mosi <= 1'b0;
 		sclk <= 1'b0;
 		state <= 1'b0;
 		cs <= 1'b1;
-		//bitcount <=4'b0000;
 	end
-else
-	begin
-		if(state === 1'b0)
-			begin
-			if(go === 1'b1)		// only accept go when we are idle
-				begin	//start sending bits
+else begin
+
+		if(state === 1'b0) begin // only accept go when we are idle
+
+			if(go === 1'b1) begin		//start sending bits
 					state <= 1'b1;
 					//sclk <= 1'b0;
 					cs <= 1'b0;			// cs line (auto?????)
 					data_o <= 16'h00;
-					delay<=3'b111;
+					delay<=clk_divider;
 					if(calibrate===1'b1)
 						bitcount <= `ADC_CALIBRATION_BITS-1;
 					else
 						bitcount <= `ADC_BITS-1;
-				end
-			else //go === 1'b0
-				begin	//idle everything
-					//sclk <= 1'b0;		// clock line
+					end
+			else begin //go === 1'b0 idle everything
 					cs <= 1'b1;			// cs line
 				end
 			end
 
-		else //state === 1'b1					// transmit the bits and receive them
-		begin
-			if(sclk === 1'b0)
-				begin //clock low, setup data and tick the clock line
-					delay<=delay-1;
-					if(delay===3'b000)
-						begin
-							sclk <= 1'b1;
-							delay<=3'b111;
-						end
+		else begin //state === 1'b1					// transmit the bits and receive them
+
+			if(delay!==3'b000) begin
+				delay<=delay-1;
 				end
-		  else
-				begin //clock high, read data and clear clock line
-					delay<=delay-1;
-					if(delay===3'b000)
-						begin
-							if(calibrate===1'b0)
-								data_o[bitcount] <= miso;
-							sclk <= 1'b0;
-							bitcount <= bitcount - 1;
-							delay<=3'b111;
-							if(bitcount===0)
-								begin
-									state<=1'b0;
-								end
-							end
+			else begin
+				delay<=clk_divider;
+				if(sclk === 1'b0)	begin //clock low, setup data and tick the clock line
+					sclk <= 1'b1;
+					end
+		  	else begin //clock high, read data and clear clock line
+					if(calibrate===1'b0)
+						data_o[bitcount] <= miso;
+					sclk <= 1'b0;
+					bitcount <= bitcount - 1;
+					if(bitcount===0)
+							state<=1'b0;
+					end
 				end
-		end
-	end
+
+		end //end state === 1'b1
+
+	end //end reset
 
 endmodule
 `endif
