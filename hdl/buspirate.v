@@ -132,7 +132,7 @@ module top #(
     );
 
     // SRAM spi/qpi/logic analyzer control logic
-    reg [2:0] sram_config_d;
+    reg [4:0] sram_config_d;
     wire [LA_WIDTH-1:0] sram_sio_tdi;
     wire [LA_WIDTH-1:0] sram_sio_tdo;
     wire [LA_WIDTH-1:0] sram_sio_oe;
@@ -158,7 +158,7 @@ module top #(
       .mcu_sclk(mcu_clock),
       .mcu_mosi(mcu_mosi),
       .mcu_miso(mcu_miso),
-      .mcu_cs(mcu_cs)
+      .mcu_cs(sram_config_d[4:3])
       );
 /*
     reg [7:0] sram_out_d;
@@ -335,7 +335,7 @@ module top #(
               sram_out_d<=mc_din[7:0];
               end
             6'h03:begin
-              sram_config_d<=mc_din[2:0];
+              sram_config_d<=mc_din[4:0];
               end
            endcase
            end

@@ -1,15 +1,15 @@
 [*]
 [*] GTKWave Analyzer v3.3.77 (w)1999-2016 BSI
-[*] Wed Dec 11 10:47:16 2019
+[*] Wed Dec 11 15:49:24 2019
 [*]
 [dumpfile] "C:\repos\BusPirateUltraHDL\hdl\buspirate_tb.vcd"
-[dumpfile_mtime] "Wed Dec 11 10:45:41 2019"
-[dumpfile_size] 94147
+[dumpfile_mtime] "Wed Dec 11 15:43:18 2019"
+[dumpfile_size] 149051
 [savefile] "C:\repos\BusPirateUltraHDL\hdl\buspirate_tb.gtkw"
 [timestart] 0
 [size] 1920 1017
 [pos] -1 -1
-*-21.330481 12356600 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+*-19.330481 24781000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] buspirate_tb.
 [treeopen] buspirate_tb.buspirate.
 [sst_width] 211
@@ -38,6 +38,32 @@ buspirate_tb.buspirate.mc_data[15:0]
 buspirate_tb.buspirate.mc_we_sync
 buspirate_tb.buspirate.mc_oe_sync
 @200
+-LA
+@28
+buspirate_tb.buspirate.SRAMS[0].spi_mode
+buspirate_tb.buspirate.SRAMS[0].qpi_mode
+buspirate_tb.buspirate.SRAMS[0].qpi_direction
+buspirate_tb.buspirate.SRAMS[0].mcu_cs
+@29
+buspirate_tb.buspirate.sram_cs[1:0]
+@28
+buspirate_tb.buspirate.mcu_cs
+buspirate_tb.buspirate.mcu_cs
+buspirate_tb.buspirate.mcu_clock
+buspirate_tb.buspirate.SRAMS[0].mcu_sclk
+buspirate_tb.buspirate.SRAMS[0].sram_clock
+buspirate_tb.buspirate.SRAMS[0].mcu_mosi
+@22
+buspirate_tb.buspirate.SRAMS[0].sram_sio_tdo[3:0]
+buspirate_tb.buspirate.SRAMS[0].sram_sio_tdi[3:0]
+buspirate_tb.buspirate.SRAMS[0].sram_sio_oe[3:0]
+@28
+buspirate_tb.buspirate.SRAMS[0].sram_cs
+buspirate_tb.buspirate.LA.start
+buspirate_tb.buspirate.LA.active
+@22
+buspirate_tb.buspirate.LA.sample_count_d[24:0]
+@200
 -BPSM
 @28
 buspirate_tb.buspirate.bpsm_halt_resume_sync
@@ -56,8 +82,6 @@ buspirate_tb.buspirate.PWM_OUT.clkout
 @200
 -ADC
 @28
-buspirate_tb.buspirate.ADC_SI.clk_divider[2:0]
-buspirate_tb.buspirate.ADC_SI.delay[2:0]
 buspirate_tb.buspirate.ADC_SI.state
 @22
 buspirate_tb.buspirate.ADC_SI.bitcount[4:0]
@@ -77,8 +101,6 @@ buspirate_tb.buspirate.SPI_MASTER.state
 buspirate_tb.buspirate.SPI_MASTER.sclk
 @22
 buspirate_tb.buspirate.SPI_MASTER.delay[15:0]
-@29
-buspirate_tb.buspirate.SPI_MASTER.clkin
 @200
 -DELAY
 @22

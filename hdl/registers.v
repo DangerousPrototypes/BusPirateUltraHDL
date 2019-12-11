@@ -1,7 +1,6 @@
 `ifndef __REGISTERS__
 `define __REGISTERS__
 
-
 `define CMD_DIO_WRITE 8'h00
 `define CMD_DIO_READ 8'h01
 `define CMD_DIO_TRIS 8'h02
@@ -28,7 +27,7 @@
 `define REG_HW_CONFIG config_register[4'h2]
 `define REG_HW_CONFIG_PULLUPS_EN config_register[4'h2][0]
 
-`define REG_LA_CONFIG config_register[4'h3]
+/*`define REG_LA_CONFIG config_register[4'h3]
 `define reg_la_io_quad config_register[4'h3][0]
 `define reg_la_io_quad_direction config_register[4'h3][1]
 `define reg_la_io_spi config_register[4'h3][2]
@@ -41,7 +40,7 @@
 `define reg_la_io_cs1 config_register[4'h3][9]
 
 `define reg_la_sample_count rreg[4'h4]
-
+*/
 `define REG_ADC_CALIBRATE config_register[4'hA][3]
 `define REG_ADC_CLOCK_DIVIDER config_register[4'hA][2:0]
 

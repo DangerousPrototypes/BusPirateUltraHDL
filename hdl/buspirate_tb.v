@@ -2,10 +2,11 @@
 `timescale 1ns/1ps
 `define DUMPSTR(x) `"x.vcd`"
 
-`define WRITE(address,data) mc_add <= address;mc_data_reg <= data;repeat(3)@(posedge clk);mc_we=0;repeat(6)@(posedge clk);mc_we=1;repeat(3)@(posedge clk)
-`define READ(address,data) mc_add <= address;mc_data_reg <= data;repeat(3)@(posedge clk);mc_oe=0;repeat(6)@(posedge clk);mc_oe=1;repeat(3)@(posedge clk)
-`define WC(command) mc_add <= 6'h01;mc_data_reg <= command;repeat(3)@(posedge clk);mc_we=0;repeat(6)@(posedge clk);mc_we=1;repeat(3)@(posedge clk)
-`define WD(data) mc_add <= 6'h00;mc_data_reg <= data;repeat(3)@(posedge clk);mc_we=0;repeat(6)@(posedge clk);mc_we=1;repeat(3)@(posedge clk)
+`define WRITE(address,data) mc_add <= address;mc_data_reg <= data;repeat(3)@(posedge clk);mc_we<=0;repeat(6)@(posedge clk);mc_we<=1;repeat(3)@(posedge clk)
+`define READ(address,data) mc_add <= address;mc_data_reg <= data;repeat(3)@(posedge clk);mc_oe<=0;repeat(6)@(posedge clk);mc_oe<=1;repeat(3)@(posedge clk)
+`define WC(command) mc_add <= 6'h01;mc_data_reg <= command;repeat(3)@(posedge clk);mc_we<=0;repeat(6)@(posedge clk);mc_we<=1;repeat(3)@(posedge clk)
+`define WD(data) mc_add <= 6'h00;mc_data_reg <= data;repeat(3)@(posedge clk);mc_we<=0;repeat(6)@(posedge clk);mc_we<=1;repeat(3)@(posedge clk)
+`define PULSE(signal) signal<=1'b1;repeat(5)@(posedge clk);signal<=1'b0;
 module buspirate_tb();
 
   parameter DURATION = 10;
@@ -13,7 +14,7 @@ module buspirate_tb();
   parameter MC_ADD_WIDTH = 6;
   parameter LA_WIDTH = 8;
   parameter LA_CHIPS = 2;
-  parameter LA_SAMPLES = 24'hF42400;  
+  parameter LA_SAMPLES = 24'hF42400;
   parameter BP_PINS = 8;
   parameter FIFO_WIDTH = 16;
   parameter FIFO_DEPTH = 256;
@@ -126,10 +127,30 @@ module buspirate_tb();
       bp_fifo_clear<=0;
       adc_data<=1'b1;
       bpsm_halt_resume_d<=1'b0;
+      mcu_cs<=1'b0;
       @(negedge rst); // wait for reset
       repeat(10) @(posedge clk);
       //test halt
       `WC(`CMD_SM_HALT);
+      //logic analyzer in SPI mode
+      `WRITE(6'h03,16'b001);
+      `WRITE(6'h03,16'b1001);
+      `WRITE(6'h03,16'b10001);
+      //test SPI mode pins
+      //`PULSE(mcu_cs);
+      `PULSE(mcu_mosi);
+      `PULSE(mcu_clock);
+      //logic analyzer to QPI mode
+      `WRITE(6'h03,16'b010);
+      //test QPI input from SRAM (read SRAM)
+      //`PULSE(sram_sio[0]);
+      //test QPI output to SRAM (write SRAM)
+      `WRITE(6'h03,16'b110);
+      `WRITE(6'h02,16'h55AA);
+      //logic analyzer reset
+      `WC(`CMD_LA_RESET);
+      //logic analyzer start
+      `WC(`CMD_LA_START);
       //IO pins setup
       `WC(`CMD_REGISTER_SET_POINTER);//CMD_REGISTER_SET_POINTER
       `WD(16'h0000);
@@ -150,9 +171,6 @@ module buspirate_tb();
       `WD(16'h0003); //REG_PERIPHERAL_1
       `WD(16'h0000); //REG_PERIPHERAL_2
       `WD(16'h0000); //REG_PERIPHERAL_3
-      bpsm_halt_resume_d<=1'b1;
-      repeat(5)@(posedge clk);
-      bpsm_halt_resume_d<=1'b0;
       `WC(`CMD_REGISTER_SET_POINTER);//CMD_REGISTER_SET_POINTER
       `WD(16'h0000);
       `WC(`CMD_REGISTER_READ);
@@ -184,7 +202,12 @@ module buspirate_tb();
       `WD(16'h000F);
       `WC(`CMD_ADC_READ); //ADC measurement
       `WD(16'h0001); //MUX 0001
+      //logic analyzer stop
+      `WC(`CMD_LA_STOP);
+      //release the state machine
+      `PULSE(bpsm_halt_resume_d);
 
+      //logic analyzer read
 
 
       /*`WRITE(6'h07,16'h08aa); //write SPI data
@@ -200,8 +223,8 @@ module buspirate_tb();
       bp_fifo_clear<=1;
       repeat(4)@(posedge clk);
       bp_fifo_clear<=0;*/
-      repeat(100)@(posedge clk);
-      //`WRITE(6'h03,16'b00000000);//trigger BP SM
+      repeat(500)@(posedge clk);
+      `WC(`CMD_LA_RESET);
       repeat(200)@(posedge clk);
       $finish;
     end
