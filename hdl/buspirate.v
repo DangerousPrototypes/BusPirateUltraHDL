@@ -11,7 +11,8 @@
 `include "spimaster.v"
 `include "fifo.v"
 `include "adc.v"
-//`include "ram.v"
+`include "sram.v"
+`include "la.v"
 `define SIMULATION
 
 module top #(
@@ -19,6 +20,7 @@ module top #(
   parameter MC_ADD_WIDTH = 6,
   parameter LA_WIDTH = 8,
   parameter LA_CHIPS = 2,
+  parameter LA_SAMPLES = 24'hF42400,
   parameter BP_PINS = 8,
   parameter FIFO_WIDTH = 16,
   parameter FIFO_DEPTH = 512
@@ -113,12 +115,52 @@ module top #(
     // PULLUP RESISTORS
     assign pullup_enable=`REG_HW_CONFIG_PULLUPS_EN; //pullups disable
 
-    //1111 0100 0010 0100 0000 0000 = 24'hF42400
-    reg [23:0] la_sample_counter;
+    // logic analyzer
+    wire la_active, la_max_samples_reached;
+    reg la_start, la_reset;
+    wire [$clog2(LA_SAMPLES):0] la_sample_count;
+
+    logic_analyzer #(
+      .SAMPLES(LA_SAMPLES)
+    ) LA (
+      .clock(clock),
+      .reset(reset || la_reset ),
+      .start(la_start),
+      .active(la_active),
+      .max_samples_reached(la_max_samples_reached),
+      .sample_count(la_sample_count)
+    );
+
+    // SRAM spi/qpi/logic analyzer control logic
+    reg [2:0] sram_config_d;
     wire [LA_WIDTH-1:0] sram_sio_tdi;
     wire [LA_WIDTH-1:0] sram_sio_tdo;
     wire [LA_WIDTH-1:0] sram_sio_oe;
-
+    reg [LA_WIDTH-1:0] sram_out_d;
+    reg sram_qpi_clock;
+    sram SRAMS[LA_CHIPS-1:0] (
+      //inputs
+      .clock(clock),
+      .auto_clock(sram_auto_clock),
+      .la_active(la_start&&la_active),
+      .spi_mode(sram_config_d[0]),
+      .qpi_mode(sram_config_d[1]),
+      .qpi_direction(sram_config_d[2]),
+      .qpi_input(sram_out_d),
+      .lat(lat),
+      // SRAM pins
+      .sram_cs(sram_cs),
+      .sram_clock(sram_clock),
+      .sram_sio_tdi(sram_sio_tdi),
+      .sram_sio_tdo(sram_sio_tdo),
+      .sram_sio_oe(sram_sio_oe),
+      //master spi pins
+      .mcu_sclk(mcu_clock),
+      .mcu_mosi(mcu_mosi),
+      .mcu_miso(mcu_miso),
+      .mcu_cs(mcu_cs)
+      );
+/*
     reg [7:0] sram_out_d;
     reg la_start;
     wire sram_clock_source;
@@ -130,6 +172,7 @@ module top #(
     assign sram_sio_tdo[4]=(la_start&&`reg_la_active)?lat[4]:`reg_la_io_quad?sram_out_d[4]:mcu_mosi;
     assign {sram_sio_tdo[7:5],sram_sio_tdo[3:1]}=(la_start&&`reg_la_active)?{lat[7:5],lat[3:1]}:{sram_out_d[7:5],sram_out_d[3:1]};
     assign mcu_miso=!`reg_la_io_cs0?sram_sio_tdi[1]:sram_sio_tdi[5]; //very hack dont like
+*/
 
     //FIFO
     wire bp_fifo_clear_sync;
@@ -288,8 +331,11 @@ module top #(
              6'h01:in_fifo_in_shift<=1'b1;
              //6'h02:sram_auto_clock_delay<=1'b1;
              6'h02:begin
-              sram_auto_clock<=1'b1;
+              sram_qpi_clock<=1'b1;
               sram_out_d<=mc_din[7:0];
+              end
+            6'h03:begin
+              sram_config_d<=mc_din[2:0];
               end
            endcase
            end
@@ -299,49 +345,29 @@ module top #(
                  6'h00: begin
                    mc_dout_d<=out_fifo_out_data;//remember if there is data in FIFO the first byte is already available
                    out_fifo_out_pop<=1'b1;//pop when done with this word
-                 end
+                   end
                  6'h01: begin
                    mc_dout_d<=out_fifo_out_data;//remember if there is data in FIFO the first byte is already available
                    out_fifo_out_pop<=1'b1;//pop when done with this word
-                 end
-                 6'h02:begin
-                   sram_auto_clock<=1'b1;
-                 end
-                 6'h03:mc_dout_d[$clog2(`STATE_HALT):0]<=bpsm_state;
+                   end
+                 6'h02: begin
+                   sram_qpi_clock<=1'b1;
+                   end
+                 6'h03: begin
+                   mc_dout_d<=la_sample_count[$clog2(LA_SAMPLES):16];
+                   end
+                6'h04: begin
+                  mc_dout_d<=la_sample_count[15:0];
+                  end
+                 //6'h03:mc_dout_d[$clog2(`STATE_HALT):0]<=bpsm_state;
                endcase
                end
 
            else begin
-             if(sram_auto_clock) begin
-               sram_auto_clock<=1'b0;
+             if(sram_qpi_clock) begin
+               sram_qpi_clock<=1'b0;
                mc_dout_d <= {8'h00,sram_sio_tdi}; //should check to be sure we want this? only reads?
                end
-            end
-
-            //TODO:
-            //prescale to 0xff and capture to nearest 0xff
-            if(`reg_la_clear_sample_counter)
-            begin
-              `reg_la_sample_count<=16'h0000;
-              `reg_la_clear_sample_counter<=1'b0;
-              `reg_la_max_samples_reached<=1'b0;
-            end
-            else if(la_start)
-            begin
-              if(`reg_la_sample_count<16'hF424) //F424
-              begin
-                `reg_la_sample_count<=`reg_la_sample_count+1;
-                `reg_la_active<=1'b1;
-              end
-              else
-                begin
-                  `reg_la_active<=1'b0;
-                  `reg_la_max_samples_reached<=1'b1;
-                end
-            end
-            else
-            begin
-              `reg_la_active<=1'b0;
             end
 
          //main bus pirate state machine
@@ -362,10 +388,12 @@ module top #(
 
                       // commands that don't have data
                       case(in_fifo_out_data[$clog2(`CMD_SM_HALT):0])
+                        `CMD_LA_RESET:
+                          la_reset<=1'b1;
                         `CMD_LA_START:
-                           la_start<=1'b1;
+                          la_start<=1'b1;
                         `CMD_LA_STOP:
-                           la_start<=1'b0;
+                          la_start<=1'b0;
                         `CMD_SM_HALT:
                           bpsm_state <= `STATE_HALT;
                       endcase
@@ -409,11 +437,11 @@ module top #(
                           adc_trigger <= 1'b1;
                           bpsm_state<=`STATE_ADC_WAIT;
                           end
-                        `CMD_DAC_WRITE: begin
+                        /*`CMD_DAC_WRITE: begin
                           dac_data_d<=in_fifo_out_data;
                           dac_trigger_d <= 1'b1;
                           bpsm_state<=`STATE_DAC_WAIT;
-                          end
+                          end*/
                         `CMD_REGISTER_SET_POINTER:
                           reg_index <= in_fifo_out_data[3:0];
                         `CMD_REGISTER_WRITE: begin
@@ -427,8 +455,9 @@ module top #(
                        default: begin
                            //$display("ERROR: unknown command!");
                            //$display(bpsm_state);
-                           //$stop;
+                           //$stop; //TODO: raise error!!!
                            //error<=1'b1;
+                           bpsm_state<=`STATE_IDLE;
                        end
                      endcase
                     end //end else data
@@ -493,6 +522,7 @@ module top #(
             //so we need to pop at the end of acting on the command
             //there are several ways to save one clock but I'll worry about that later
             `STATE_POP_FIFO: begin
+              la_reset<=1'b0; //TODO: is clearing these all here really the best way??? makes me nuts
               pwm_reset<=1'b0;
               out_fifo_in_shift<=1'b0;
               in_fifo_out_pop<=1'b1;
@@ -522,7 +552,7 @@ module top #(
       .PULLUP(1'b0)          //no pullup
     ) sram_mosi_sbio[LA_CHIPS-1:0] (
       .PACKAGE_PIN({sram_sio[4],sram_sio[0]}),//which pin
-      .OUTPUT_ENABLE(`reg_la_io_quad?`reg_la_io_quad_direction:1'b1),   //output enable wire mcu_quadmode?mcu_direction:1'b1
+      .OUTPUT_ENABLE({sram_sio_oe[4],sram_sio_oe[0]}),   //output enable wire mcu_quadmode?mcu_direction:1'b1
       .D_OUT_0({sram_sio_tdo[4],sram_sio_tdo[0]}),        //data out wire
       .D_IN_0({sram_sio_tdi[4],sram_sio_tdi[0]})           //data in wire
     );
@@ -532,7 +562,7 @@ module top #(
 			.PULLUP(1'b0)          //no pullup
 		) sram_miso_sbio[LA_CHIPS-1:0](
 			.PACKAGE_PIN({sram_sio[5],sram_sio[1]}),//which pin
-			.OUTPUT_ENABLE(`reg_la_io_quad?`reg_la_io_quad_direction:1'b0),   //output enable wire mcu_quadmode?mcu_direction:1'b0
+			.OUTPUT_ENABLE({sram_sio_oe[5],sram_sio_oe[1]}),   //output enable wire mcu_quadmode?mcu_direction:1'b0
 			.D_OUT_0({sram_sio_tdo[5],sram_sio_tdo[1]}),        //data out wire
 			.D_IN_0({sram_sio_tdi[5],sram_sio_tdi[1]})           //data in wire
 		);
@@ -542,7 +572,7 @@ module top #(
 			.PULLUP(1'b0)          //no pullup
 		) sram_sio_sbio[3:0] (
 			.PACKAGE_PIN({sram_sio[7:6],sram_sio[3:2]}),//which pin
-			.OUTPUT_ENABLE(`reg_la_io_quad&&`reg_la_io_quad_direction),   //quadmode = 1 and direction = 1
+			.OUTPUT_ENABLE({sram_sio_oe[7:6],sram_sio_oe[3:2]}),   //quadmode = 1 and direction = 1
 			.D_OUT_0({sram_sio_tdo[7:6],sram_sio_tdo[3:2]}),        //data out wire
 			.D_IN_0({sram_sio_tdi[7:6],sram_sio_tdi[3:2]})           //data in wire
 		);

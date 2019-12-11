@@ -16,9 +16,10 @@
 `define CMD_REGISTER_SET_POINTER 8'h0B
 `define CMD_REGISTER_WRITE 8'h0C
 `define CMD_REGISTER_READ 8'h0D
-`define CMD_DAC_WRITE 8'h0E
+//`define CMD_DAC_WRITE 8'h0E
+`define CMD_LA_RESET 8'h0E
 `define CMD_SM_HALT 8'h0F
-
+//TODO: adjust for more commands: frequency measurement etc
 
 `define REG_BPIO_OE config_register[4'h0][BP_PINS-1:0]
 

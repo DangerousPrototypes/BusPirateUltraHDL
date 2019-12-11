@@ -13,6 +13,7 @@ module buspirate_tb();
   parameter MC_ADD_WIDTH = 6;
   parameter LA_WIDTH = 8;
   parameter LA_CHIPS = 2;
+  parameter LA_SAMPLES = 24'hF42400;  
   parameter BP_PINS = 8;
   parameter FIFO_WIDTH = 16;
   parameter FIFO_DEPTH = 256;
@@ -57,6 +58,7 @@ module buspirate_tb();
     .MC_ADD_WIDTH(MC_ADD_WIDTH),
     .LA_WIDTH(LA_WIDTH),
     .LA_CHIPS(LA_CHIPS),
+    .LA_SAMPLES(LA_SAMPLES),
     .BP_PINS(BP_PINS),
     .FIFO_WIDTH(FIFO_WIDTH),
     .FIFO_DEPTH(FIFO_DEPTH)
