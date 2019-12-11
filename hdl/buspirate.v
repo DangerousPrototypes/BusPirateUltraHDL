@@ -117,6 +117,7 @@ module top #(
     reg [23:0] la_sample_counter;
     wire [LA_WIDTH-1:0] sram_sio_tdi;
     wire [LA_WIDTH-1:0] sram_sio_tdo;
+    wire [LA_WIDTH-1:0] sram_sio_oe;
 
     reg [7:0] sram_out_d;
     reg la_start;
@@ -286,7 +287,10 @@ module top #(
              6'h00:in_fifo_in_shift<=1'b1;
              6'h01:in_fifo_in_shift<=1'b1;
              //6'h02:sram_auto_clock_delay<=1'b1;
-             6'h02:sram_auto_clock<=1'b1;
+             6'h02:begin
+              sram_auto_clock<=1'b1;
+              sram_out_d<=mc_din[7:0];
+              end
            endcase
            end
 
@@ -314,6 +318,31 @@ module top #(
                end
             end
 
+            //TODO:
+            //prescale to 0xff and capture to nearest 0xff
+            if(`reg_la_clear_sample_counter)
+            begin
+              `reg_la_sample_count<=16'h0000;
+              `reg_la_clear_sample_counter<=1'b0;
+              `reg_la_max_samples_reached<=1'b0;
+            end
+            else if(la_start)
+            begin
+              if(`reg_la_sample_count<16'hF424) //F424
+              begin
+                `reg_la_sample_count<=`reg_la_sample_count+1;
+                `reg_la_active<=1'b1;
+              end
+              else
+                begin
+                  `reg_la_active<=1'b0;
+                  `reg_la_max_samples_reached<=1'b1;
+                end
+            end
+            else
+            begin
+              `reg_la_active<=1'b0;
+            end
 
          //main bus pirate state machine
          case(bpsm_state)
@@ -485,39 +514,6 @@ module top #(
           endcase //bpsm_state
 
         end //if !reset
-
-/*
-
-        //TODO:
-        //prescale to 0xff and capture to nearest 0xff
-        if(`reg_la_clear_sample_counter)
-        begin
-          `reg_la_sample_count<=16'h0000;
-          `reg_la_clear_sample_counter<=1'b0;
-          `reg_la_max_samples_reached<=1'b0;
-        end
-        else if(la_start)
-        begin
-          if(`reg_la_sample_count<16'hF424) //F424
-          begin
-            `reg_la_sample_count<=`reg_la_sample_count+1;
-            `reg_la_active<=1'b1;
-          end
-          else
-            begin
-              `reg_la_active<=1'b0;
-              `reg_la_max_samples_reached<=1'b1;
-            end
-        end
-        else
-        begin
-          `reg_la_active<=1'b0;
-        end
-
-*/
-
-      //end //end always begin
-
 
     //define the tristate data pin explicitly in the top module
     //register MOSI
