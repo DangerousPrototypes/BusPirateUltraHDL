@@ -138,15 +138,18 @@ module top #(
     wire [LA_WIDTH-1:0] sram_sio_oe;
     reg [LA_WIDTH-1:0] sram_out_d;
     reg sram_qpi_clock;
+    wire [1:0] mcu_miso_bus;
+    assign mcu_miso = !sram_config_d[4]? mcu_miso_bus[0] : mcu_miso_bus[1];
     sram SRAMS[LA_CHIPS-1:0] (
       //inputs
       .clock(clock),
-      .auto_clock(sram_auto_clock),
+      .auto_clock(sram_qpi_clock),
       .la_active(la_start&&la_active),
       .spi_mode(sram_config_d[0]),
       .qpi_mode(sram_config_d[1]),
       .qpi_direction(sram_config_d[2]),
       .qpi_input(sram_out_d),
+      .enable(sram_config_d[4:3]),
       .lat(lat),
       // SRAM pins
       .sram_cs(sram_cs),
@@ -157,8 +160,8 @@ module top #(
       //master spi pins
       .mcu_sclk(mcu_clock),
       .mcu_mosi(mcu_mosi),
-      .mcu_miso(mcu_miso),
-      .mcu_cs(sram_config_d[4:3])
+      .mcu_miso(mcu_miso_bus),
+      .mcu_cs(mcu_cs)
       );
 /*
     reg [7:0] sram_out_d;
@@ -320,6 +323,7 @@ module top #(
            `REG_HW_CONFIG<=0;
            bp_busy <= 1'b0;
            la_start<=1'b0;
+           sram_qpi_clock<=1'b0;
          end
        else begin
 

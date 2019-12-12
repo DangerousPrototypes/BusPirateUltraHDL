@@ -48,11 +48,8 @@ module buspirate_tb();
   wire pullup_enable;
   reg bpsm_halt_resume_d;
 
-
   assign mc_data=(mc_oe)?mc_data_reg:16'hzzzz;
-
-  assign sram_sio=(!mc_oe)?sram_sio_d:8'hzz;
-
+  assign sram_sio=sram_sio_d;
 
   top #(
     .MC_DATA_WIDTH(MC_DATA_WIDTH),
@@ -74,8 +71,9 @@ module buspirate_tb();
     .sram_sio(sram_sio),
     .lat_oe(lat_oe),
     .lat_dir(lat_dir),
-    .lat(lat),
+    .lat(bpio_state),
     .mcu_clock(mcu_clock),
+    .mcu_cs(mcu_cs),
     .mcu_mosi(mcu_mosi),
     .mcu_miso(mcu_miso),
     .mc_oe(mc_oe),
@@ -127,26 +125,74 @@ module buspirate_tb();
       bp_fifo_clear<=0;
       adc_data<=1'b1;
       bpsm_halt_resume_d<=1'b0;
-      mcu_cs<=1'b0;
+      mcu_cs<=1'b1;
+      mcu_clock<=1'b0;
+      mcu_mosi<=1'b0;
+      sram_sio_d<=0;
       @(negedge rst); // wait for reset
       repeat(10) @(posedge clk);
       //test halt
       `WC(`CMD_SM_HALT);
+
+      //
       //logic analyzer in SPI mode
-      `WRITE(6'h03,16'b001);
-      `WRITE(6'h03,16'b1001);
-      `WRITE(6'h03,16'b10001);
+      //
+      `WRITE(6'h03,16'b00001); //0x01
+
+      //with sram 0 selected, miso should go high->low
+      //CS should only be active on sram0 CS pin
+      `WRITE(6'h03,16'b01001); // 0x09
+      mcu_cs<=1'b0;
+      sram_sio_d<=8'bzz0zzz1z;
+      repeat(5)@(posedge clk)
+      sram_sio_d<=8'bzz1zzz0z;
+      repeat(5)@(posedge clk)
+      mcu_cs<=1'b1;
+
+      `WRITE(6'h03,16'b10001); // 0x11
+      //with sram 1 selected, miso should go low->high
+      //CS should only be active on sram1 CS pin
+      mcu_cs<=1'b0;
+      sram_sio_d<=8'bzz0zzz1z;
+      repeat(5)@(posedge clk)
+      sram_sio_d<=8'bzz1zzz0z;
+      repeat(5)@(posedge clk)
+      mcu_cs<=1'b1;
+
+      `WRITE(6'h03,16'b11001); // 0x11
+      //with sram0 & 1 selected, miso should go low->high
+      //CS should be active on sram0 & 1 CS pin
+      mcu_cs<=1'b0;
+      sram_sio_d<=8'bzz0zzz1z;
+      repeat(5)@(posedge clk)
+      sram_sio_d<=8'bzz1zzz0z;
+      repeat(5)@(posedge clk)
+      mcu_cs<=1'b1;
+      sram_sio_d<=8'hzz;
       //test SPI mode pins
-      //`PULSE(mcu_cs);
-      `PULSE(mcu_mosi);
+      `PULSE(mcu_cs);
       `PULSE(mcu_clock);
+      `PULSE(mcu_mosi);
+
+      //
       //logic analyzer to QPI mode
-      `WRITE(6'h03,16'b010);
+      //
       //test QPI input from SRAM (read SRAM)
+      `WRITE(6'h03,16'b00010);
+      sram_sio_d<=8'b10101010;
+      repeat(5)@(posedge clk)
+      sram_sio_d<=8'b01010101;
+      repeat(5)@(posedge clk)
+
       //`PULSE(sram_sio[0]);
       //test QPI output to SRAM (write SRAM)
+      sram_sio_d<=8'hzz;
       `WRITE(6'h03,16'b110);
       `WRITE(6'h02,16'h55AA);
+
+      //
+      // test the bus pirate state machine commands
+      //
       //logic analyzer reset
       `WC(`CMD_LA_RESET);
       //logic analyzer start
@@ -207,18 +253,6 @@ module buspirate_tb();
       //release the state machine
       `PULSE(bpsm_halt_resume_d);
 
-      //logic analyzer read
-
-
-      /*`WRITE(6'h07,16'h08aa); //write SPI data
-      `WRITE(6'h07,16'h08ff);
-      //`WRITE(6'h07,16'hFD00);//halt command
-      `WRITE(6'h07,16'h0800);
-      `WRITE(6'h07,16'h840F); //delay 0x0f
-      `WRITE(6'h07,16'h81FF); //IO pins high
-      `WRITE(6'h07,16'hFF00); //stop logic analyzer
-      `WRITE(6'h03,16'b00000000);//trigger BP SM
-      */
       /*repeat(30)@(posedge clk);
       bp_fifo_clear<=1;
       repeat(4)@(posedge clk);
