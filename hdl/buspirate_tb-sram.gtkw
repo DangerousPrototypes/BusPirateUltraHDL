@@ -1,0 +1,67 @@
+[*]
+[*] GTKWave Analyzer v3.3.77 (w)1999-2016 BSI
+[*] Thu Dec 12 10:42:11 2019
+[*]
+[dumpfile] "C:\repos\BusPirateUltraHDL\hdl\buspirate_tb.vcd"
+[dumpfile_mtime] "Thu Dec 12 10:39:43 2019"
+[dumpfile_size] 156224
+[savefile] "C:\repos\BusPirateUltraHDL\hdl\buspirate_tb.gtkw"
+[timestart] 0
+[size] 1920 1017
+[pos] -1 -1
+*-19.330481 3197000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] buspirate_tb.
+[treeopen] buspirate_tb.buspirate.
+[sst_width] 297
+[signals_width] 285
+[sst_expanded] 1
+[sst_vpaned_height] 478
+@200
+-MEMORY INTF
+@22
+buspirate_tb.buspirate.mc_add[5:0]
+buspirate_tb.buspirate.mc_data[15:0]
+@28
+buspirate_tb.buspirate.mc_we_sync
+buspirate_tb.buspirate.mc_oe_sync
+@200
+-LA
+@28
+buspirate_tb.buspirate.SRAMS[0].spi_mode
+buspirate_tb.buspirate.SRAMS[0].qpi_mode
+buspirate_tb.buspirate.SRAMS[0].qpi_direction
+buspirate_tb.buspirate.sram_cs[1:0]
+@22
+buspirate_tb.buspirate.lat[7:0]
+@28
+buspirate_tb.buspirate.sram_sio[7:0]
+buspirate_tb.buspirate.mcu_miso
+@29
+buspirate_tb.sram_sio_d[7:0]
+@200
+-SRAM0
+@28
+buspirate_tb.buspirate.SRAMS[0].sram_cs
+buspirate_tb.buspirate.SRAMS[0].mcu_cs
+buspirate_tb.buspirate.SRAMS[0].sram_clock
+buspirate_tb.buspirate.SRAMS[0].mcu_mosi
+buspirate_tb.buspirate.SRAMS[0].mcu_miso
+buspirate_tb.buspirate.SRAMS[0].sram_sio_tdo[3:0]
+buspirate_tb.buspirate.SRAMS[0].sram_sio_tdi[3:0]
+buspirate_tb.buspirate.SRAMS[0].sram_sio_oe[3:0]
+@200
+-SRAM1
+@28
+buspirate_tb.buspirate.SRAMS[1].sram_cs
+buspirate_tb.buspirate.SRAMS[1].mcu_cs
+buspirate_tb.buspirate.SRAMS[0].mcu_sclk
+buspirate_tb.buspirate.SRAMS[0].qpi_mode
+buspirate_tb.buspirate.SRAMS[0].auto_clock
+buspirate_tb.buspirate.SRAMS[1].sram_clock
+buspirate_tb.buspirate.SRAMS[1].mcu_mosi
+buspirate_tb.buspirate.SRAMS[1].mcu_miso
+buspirate_tb.buspirate.SRAMS[1].sram_sio_tdo[3:0]
+buspirate_tb.buspirate.SRAMS[1].sram_sio_tdi[3:0]
+buspirate_tb.buspirate.SRAMS[1].sram_sio_oe[3:0]
+[pattern_trace] 1
+[pattern_trace] 0
